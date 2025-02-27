@@ -48,11 +48,11 @@ function Navbar() {
       <div className="bluetooth-container">
         <FontAwesomeIcon
           icon={faBluetooth} //* Bluetooth icon
-          className="navbar-icon"
+          className={`navbar-icon ${isConnected ? "connected" : ""}`} //* Add class when connected
           onClick={handleBluetoothClick} //* Handle clicks on the Bluetooth icon
         />
         <span className="navbar-tooltip">
-          {isConnected ? "Disconnect BLE" : "Connect BLE"}{" "}
+          {isConnected ? "Touch to Disconnect BLE" : "Touch to Connect BLE"}{" "}
           {/* Dynamic tooltip */}
         </span>
       </div>

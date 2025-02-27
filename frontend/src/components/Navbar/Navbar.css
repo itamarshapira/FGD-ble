@@ -30,6 +30,11 @@
     position: relative;
     display: inline-block;
   }
+
+/* Bluetooth icon turns red on hover ONLY when connected */
+.navbar-icon.connected:hover {
+  color: red;
+}
   
   /* Tooltip styling */
   .navbar-tooltip {

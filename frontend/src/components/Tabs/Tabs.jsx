@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Tabs.css";
 import Logo from "../Logo/Logo"; // Importing the Logo component
+import { readDeviceInformation } from "../../services/bleService"; //* Import BLE service functions
 
 /**
  * Tabs Component:
@@ -11,10 +12,47 @@ function Tabs() {
   // State to keep track of the currently active tab (default: "Wellcome")
   const [activeTab, setActiveTab] = useState("Welcome");
 
+  const [deviceInfo, setDeviceInfo] = useState(null); // Store device information
+
+  // Fetch device information automatically when "Device Info" is selected
+  useEffect(() => {
+    if (activeTab === "Device Info") {
+      async function fetchData() {
+        // We can't use await directly inside useEffect. React requires us to put async code inside another function and then call it.
+        const info = await readDeviceInformation(); // Read from BLE
+        setDeviceInfo(info); // update deviceInfo
+      }
+      fetchData();
+    }
+  }, [activeTab]); // Runs every time activeTab changes
+
   // Array of tabs: Each tab has a name and corresponding content
   const tabs = [
     { name: "Gas level", content: "Content for Gas level" },
-    { name: "params2", content: "Content for Params_2" },
+    {
+      name: "Device Info",
+      content: (
+        <div>
+          <h2>Device Information</h2>
+          {deviceInfo ? ( //  Show device info if available
+            <div className="device-details">
+              <p>
+                <strong>Manufacturer:</strong> {deviceInfo.manufacturerName}
+              </p>
+              <p>
+                <strong>Model:</strong> {deviceInfo.modelNumber}
+              </p>
+              <p>
+                <strong>System ID:</strong> {deviceInfo.systemID}
+              </p>
+            </div>
+          ) : (
+            // Else
+            <p>Loading device info...</p> //  Show loading until data arrives
+          )}
+        </div>
+      ),
+    },
     { name: "params3", content: "Content for Params_3" },
     {
       name: "Welcome",
