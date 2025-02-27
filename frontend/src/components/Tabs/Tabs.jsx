@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./Tabs.css";
 import Logo from "../Logo/Logo"; // Importing the Logo component
 import { readDeviceInformation } from "../../services/bleService"; //* Import BLE service functions
-
+import DeviceData from "../DeviceData/DeviceData";
 /**
  * Tabs Component:
  * Dynamically renders tab buttons and their corresponding content
@@ -28,7 +28,7 @@ function Tabs() {
 
   // Array of tabs: Each tab has a name and corresponding content
   const tabs = [
-    { name: "Gas level", content: "Content for Gas level" },
+    { name: "Device Data", content: <DeviceData /> },
     {
       name: "Device Info",
       content: (

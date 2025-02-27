@@ -12,16 +12,16 @@ const MOCK_MODE = false; //TEST Change to false when using the real device
 //const receiveCharId = "8ac32d3f-5cb9-4d44-bec2-ee689169f626"; //* UUID for receiving data from the device
 //const devicePrefix = "test"; //* Prefix to filter devices during discovery
 
-const deviceInformationServiceUUID = "0000180a-0000-1000-8000-00805f9b34fb";
+const deviceInformationServiceUUID = "0000180a-0000-1000-8000-00805f9b34fb"; //* PRIME UUID
 const manufacturerNameUUID = "00002a29-0000-1000-8000-00805f9b34fb";
 const modelNumberUUID = "00002a24-0000-1000-8000-00805f9b34fb";
 const systemIDUUID = "00002a23-0000-1000-8000-00805f9b34fb";
 
-const batteryServiceUUID = "0000180f-0000-1000-8000-00805f9b34fb"; //* 0x180F. This is the standard UUID for the Battery Service Proper lowercase format
+const batteryServiceUUID = "0000180f-0000-1000-8000-00805f9b34fb"; //* PRIME UUID 0x180F. This is the standard UUID for the Battery Service Proper lowercase format
 const batteryLevelCharacteristicUUID = "00002a19-0000-1000-8000-00805f9b34fb"; //* 0x2A19 - This is the standard UUID for the Battery Level Characteristic. Proper lowercase format
 
 let device = null; //* Variable to store connected device
-let gattServer = null; //* Variable to store GATT server instance
+let gattServer = null; //* Variable to store GATT server instance --> (Generic Attribute Profile) is a protocol used in BLE communication. It defines how two BLE devices send and receive data between each other.
 
 export function logMessage(msg) {
   // * Logs messages to the console for debugging purposes.
@@ -49,6 +49,7 @@ export async function connectToDevice() {
   try {
     logMessage("Requesting Bluetooth device...");
     device = await navigator.bluetooth.requestDevice({
+      //* returns a BluetoothDevice object.
       acceptAllDevices: true, //* Allow only filtered devices
       optionalServices: [batteryServiceUUID, deviceInformationServiceUUID], // Correctly formatted UUID
       // filters: [{ namePrefix: devicePrefix }], //* Filter devices by prefix
@@ -56,7 +57,8 @@ export async function connectToDevice() {
     });
 
     logMessage(`Connecting to GATT server of device: ${device.name}`);
-    gattServer = await device.gatt.connect(); //* Establish GATT connection
+    gattServer = await device.gatt.connect(); //* Establish GATT connection --> The returning BLE Object from above have a device that has a gatt property that represents the GATT server inside the device
+    // gatt.connect() starts a Bluetooth connection.
 
     logMessage("Connected to GATT server!");
 
