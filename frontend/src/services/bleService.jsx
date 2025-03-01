@@ -6,7 +6,7 @@
  ** Interacting with BLE services and characteristics.
  */
 
-const MOCK_MODE = false; //TEST Change to false when using the real device
+const MOCK_MODE = true; //TEST Change to false when using the real device
 
 //const serviceId = "1b7e8251-2877-41c3-b46e-cf057c562023"; //* UUID for accessing specific BLE service
 //const receiveCharId = "8ac32d3f-5cb9-4d44-bec2-ee689169f626"; //* UUID for receiving data from the device
