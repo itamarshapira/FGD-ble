@@ -44,7 +44,7 @@ const DeviceData = () => {
       console.log("Component Unmounted: Clearing interval...");
       clearInterval(interval);
     }; // Cleanup on unmount
-  }, []);
+  }, [updateGasLevels]); //* Now `updateGasLevels` is listed as a dependency
 
   // * Convert gasLevels into Recharts data format
   /**
