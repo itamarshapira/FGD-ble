@@ -25,28 +25,38 @@ const DeviceData = () => {
    * @param {Array} currentGasLevels - The latest state of gas levels before the update.
    * @returns {Array} A new array containing the previous gas levels plus the new gas level.
    */
-  const updateGasLevels = (currentGasLevels) => {
-    const newGasLevel = generateGasLevel(); // * Calls `generateGasLevel()` to get a new random gas reading.
-    return [...currentGasLevels, newGasLevel];
-  };
 
-  // * useEffect to update gas level every 2 seconds - but render only when component mount
+  // * useEffect to update gas levels every 2 seconds — but only run when the component mounts (no re-renders)
   /**
-   * Runs once when the component mounts ([] dependency array).
-   * Starts a timer (setInterval) that Calls generateGasLevel(), Updates gasLevel every 2 seconds. without Rendering th component!!
+   * This useEffect runs **once** when the component mounts (thanks to the empty dependency array []).
+   * It starts a timer (setInterval) that:
+   *   - Calls `generateGasLevel()` every 2 seconds.
+   *   - Adds the new gas level to the current array using `setGasLevels`.
+   *
+   * ⚠️ Because `updateGasLevels` is defined INSIDE the useEffect, it does NOT go in the dependency array.
+   *    This prevents ESLint errors and unnecessary re-renders.
    */
   useEffect(() => {
     console.log("Component Mounted: Starting interval...");
+
+    // Define how to update the gas levels: add a new value to the array
+    const updateGasLevels = (currentGasLevels) => {
+      const newGasLevel = generateGasLevel(); // * Get a new simulated gas reading
+      return [...currentGasLevels, newGasLevel]; // * Add it to the existing array
+    };
+
+    // Start interval: every 2 seconds, update gas levels
     const interval = setInterval(() => {
       console.log("Gas level updating...");
-      setGasLevels(updateGasLevels); //* calls updateGasLevels to update the state
+      setGasLevels(updateGasLevels); // * Use updater function form of setState
     }, 2000);
 
+    // Cleanup function: stops interval when component is removed from screen
     return () => {
       console.log("Component Unmounted: Clearing interval...");
       clearInterval(interval);
-    }; // Cleanup on unmount
-  }, [updateGasLevels]); //* Now `updateGasLevels` is listed as a dependency
+    };
+  }, []); // ✅ Empty array = run only once on mount
 
   // * Convert gasLevels into Recharts data format
   /**
