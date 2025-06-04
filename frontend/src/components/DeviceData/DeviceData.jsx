@@ -1,3 +1,5 @@
+// 🧪 Test deployment trigger for Netlify
+
 import React, { useState, useEffect } from "react";
 import "./DeviceData.css";
 import {
