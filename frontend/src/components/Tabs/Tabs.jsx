@@ -3,6 +3,13 @@ import "./Tabs.css";
 import Logo from "../Logo/Logo"; // Importing the Logo component
 import { readDeviceInformation } from "../../services/bleService"; //* Import BLE service functions
 import DeviceData from "../DeviceData/DeviceData";
+import { readAlertStatus } from "../../services/bleService";
+import { readEnvironmentalData } from "../../services/bleService";
+import { readGenericAccess } from "../../services/bleService";
+import { readDeviceSettings } from "../../services/bleService";
+import { writeDeviceSetting } from "../../services/bleService";
+import { selectedGasTypeUUID } from "../../services/bleService";
+
 /**
  * Tabs Component:
  * Dynamically renders tab buttons and their corresponding content
@@ -14,7 +21,48 @@ function Tabs() {
 
   const [deviceInfo, setDeviceInfo] = useState(null); // Store device information
 
-  // Fetch device information automatically when "Device Info" is selected
+  const [alertStatus, setAlertStatus] = useState(null); // store alert status
+
+  const [environmentalData, setEnvironmentalData] = useState(null); // store Enviromental Sensing
+
+  const [genericAccessInfo, setGenericAccessInfo] = useState(null); // store genericAccessInfo
+
+  const [deviceSettings, setDeviceSettings] = useState(null); // store device settings
+
+  const [selectedGasType, setSelectedGasType] = useState(0); // default to Methane
+  const gasTypeLabel = (value) => {
+    switch (value) {
+      case 0:
+        return "Methane";
+      case 1:
+        return "Propane";
+      case 2:
+        return "Butane";
+      case 3:
+        return "Hydrogen";
+      default:
+        return `Unknown (${value})`;
+    }
+  };
+
+  // Handle writing selected gas type to the BLE device
+  const handleWriteGasType = async () => {
+    const success = await writeDeviceSetting(
+      selectedGasTypeUUID,
+      selectedGasType
+    );
+    if (success) {
+      console.log("✅ Gas type updated!");
+
+      //  re-fetch and sync again
+      const updatedSettings = await readDeviceSettings();
+      setDeviceSettings(updatedSettings);
+    } else {
+      console.log("❌ Failed to update gas type.");
+    }
+  };
+
+  // *Fetch device information automatically when "Device Info" is selected
   useEffect(() => {
     if (activeTab === "Device Info") {
       async function fetchData() {
@@ -26,7 +74,48 @@ function Tabs() {
     }
   }, [activeTab]); // Runs every time activeTab changes
 
-  // Array of tabs: Each tab has a name and corresponding content
+  // *fetch Alert Status
+  useEffect(() => {
+    if (activeTab === "Alert Status") {
+      async function fetchAlert() {
+        const status = await readAlertStatus();
+        setAlertStatus(status);
+        console.log(" Alert Status (test):", status);
+      }
+      fetchAlert();
+    }
+  }, [activeTab]);
+
+  // *fetch environmentalData Status
+  useEffect(() => {
+    if (activeTab === "Environmental Sensing") {
+      async function fetchEnvironmentalData() {
+        const data = await readEnvironmentalData();
+        setEnvironmentalData(data);
+      }
+      fetchEnvironmentalData();
+    }
+  }, [activeTab]);
+
+  // *fetch generic acsses
+  useEffect(() => {
+    if (activeTab === "Generic Access") {
+      readGenericAccess().then(setGenericAccessInfo);
+    }
+  }, [activeTab]);
+
+  // *fetch Device settings
+  useEffect(() => {
+    if (activeTab === "Device Settings") {
+      async function fetchSettings() {
+        const settings = await readDeviceSettings(); // Read from BLE device
+        setDeviceSettings(settings); // Store settings (all fields)
+      }
+      fetchSettings();
+    }
+  }, [activeTab]);
+
+  // *Array of tabs: Each tab has a name and corresponding content
   const tabs = [
     { name: "Device Data", content: <DeviceData /> },
     {
@@ -49,6 +138,132 @@ function Tabs() {
           ) : (
             // Else
             <p>Loading device info...</p> //  Show loading until data arrives
+          )}
+        </div>
+      ),
+    },
+    {
+      name: "Alert Status",
+      content: (
+        <div>
+          <h2>Alert Notification Status</h2>
+          {alertStatus === null ? (
+            <p>Reading alert status...</p>
+          ) : (
+            <p>
+              <strong>Status:</strong>{" "}
+              {alertStatus === 0
+                ? "All clear"
+                : `Raw: 0x${alertStatus.toString(16).padStart(2, "0")}`}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      name: "Environmental Sensing",
+      content: (
+        <div>
+          <h2>Environmental Sensing</h2>
+          {environmentalData ? (
+            <div className="environmental-details">
+              <p>
+                <strong>Methane Concentration:</strong>{" "}
+                {environmentalData.methane} ppm
+              </p>
+              <p>
+                <strong>LEL Status:</strong> {environmentalData.lelStatus}
+              </p>
+            </div>
+          ) : (
+            <p>Loading environmental data...</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      name: "Generic Access",
+      content: (
+        <div>
+          <h2>Generic Access</h2>
+          {genericAccessInfo ? (
+            <div>
+              <p>
+                <strong>Device Name:</strong> {genericAccessInfo.deviceName}
+              </p>
+              <p>
+                <strong>Appearance:</strong> {genericAccessInfo.appearance}
+              </p>
+            </div>
+          ) : (
+            <p>Loading generic access info...</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      name: "Device Settings",
+      content: (
+        <div>
+          <h2>Device Settings</h2>
+          {deviceSettings ? (
+            <div className="device-settings">
+              <p>
+                <strong>Full Scale:</strong> {deviceSettings.fullScale}
+              </p>
+              <p>
+                <strong>Alarm Level:</strong> {deviceSettings.alarmLevel}
+              </p>
+              <p>
+                <strong>Warn Level:</strong> {deviceSettings.warnLevel}
+              </p>
+              <p>
+                <strong>Lowest Level:</strong> {deviceSettings.lowestLevel}
+              </p>
+              <p>
+                <strong>Response Time:</strong> {deviceSettings.responseTime}
+              </p>
+              <p>
+                <strong>Block Delay:</strong> {deviceSettings.blockDelay}
+              </p>
+
+              <p>
+                <strong>Gas Type:</strong> {deviceSettings.selectedGasType}
+              </p>
+
+              <div style={{ marginTop: "1rem" }}>
+                <label htmlFor="gas-type-select">
+                  <strong>Select Gas Type:</strong>
+                </label>
+                <select
+                  id="gas-type-select"
+                  value={selectedGasType}
+                  onChange={(e) => setSelectedGasType(parseInt(e.target.value))}
+                >
+                  <option value={0}>Methane</option>
+                  <option value={1}>Propane</option>
+                  <option value={2}>Butane</option>
+                  <option value={3}>Hydrogen</option>
+                </select>
+
+                <button
+                  onClick={handleWriteGasType}
+                  style={{ marginLeft: "1rem" }}
+                >
+                  Save
+                </button>
+
+                {/*  Optional: Show current gas type label */}
+                <p style={{ marginTop: "0.5rem", color: "green" }}>
+                  Current Gas Type:{" "}
+                  <strong>
+                    {gasTypeLabel(deviceSettings.selectedGasType)}
+                  </strong>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p>Loading settings...</p>
           )}
         </div>
       ),
