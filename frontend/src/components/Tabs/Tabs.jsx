@@ -9,6 +9,7 @@ import { readGenericAccess } from "../../services/bleService";
 import { readDeviceSettings } from "../../services/bleService";
 import { writeDeviceSetting } from "../../services/bleService";
 import { selectedGasTypeUUID } from "../../services/bleService";
+import { fullScaleUUID } from "../../services/bleService";
 
 /**
  * Tabs Component:
@@ -61,6 +62,8 @@ function Tabs() {
       console.log("❌ Failed to update gas type.");
     }
   };
+
+  const [fullScale, setFullScale] = useState(0);
 
   // *Fetch device information automatically when "Device Info" is selected
   useEffect(() => {
@@ -210,6 +213,41 @@ function Tabs() {
             <div className="device-settings">
               <p>
                 <strong>Full Scale:</strong> {deviceSettings.fullScale}
+                <div>
+                  <label htmlFor="full-scale-input">
+                    <strong>Edit:</strong>
+                  </label>
+                  <input
+                    type="number"
+                    id="full-scale-input"
+                    value={fullScale}
+                    onChange={(e) => setFullScale(parseInt(e.target.value))}
+                    min={0}
+                    max={1000}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeDeviceSetting(
+                        fullScaleUUID,
+                        fullScale
+                      );
+                      if (success) {
+                        console.log("✅ Full Scale updated!");
+
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readDeviceSettings();
+                        setDeviceSettings(updated);
+                      } else {
+                        console.log("❌ Failed to update Full Scale.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </p>
               <p>
                 <strong>Alarm Level:</strong> {deviceSettings.alarmLevel}

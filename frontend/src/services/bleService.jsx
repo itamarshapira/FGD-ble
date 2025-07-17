@@ -39,7 +39,7 @@ const appearanceUUID = "00002a01-0000-1000-8000-00805f9b34fb"; // 0x2A01
 //*Device Settings Custom Service
 const deviceSettingsServiceUUID = "1b7e8251-2877-41c3-b46e-cf057c562024"; // PRIME
 
-const fullScaleUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078901";
+export const fullScaleUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078901";
 const alarmLevelUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078902";
 const warnLevelUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078903";
 const lowestLevelUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078904";
