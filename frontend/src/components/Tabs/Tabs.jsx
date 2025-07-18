@@ -9,7 +9,14 @@ import { readGenericAccess } from "../../services/bleService";
 import { readDeviceSettings } from "../../services/bleService";
 import { writeDeviceSetting } from "../../services/bleService";
 import { selectedGasTypeUUID } from "../../services/bleService";
-import { fullScaleUUID } from "../../services/bleService";
+import {
+  fullScaleUUID,
+  alarmLevelUUID,
+  warnLevelUUID,
+  lowestLevelUUID,
+  responseTimeUUID,
+  blockDelayUUID,
+} from "../../services/bleService";
 
 /**
  * Tabs Component:
@@ -64,6 +71,11 @@ function Tabs() {
   };
 
   const [fullScale, setFullScale] = useState(0);
+  const [alarmLevel, setAlarmLevel] = useState(0);
+  const [warnLevel, setWarnLevel] = useState(0);
+  const [lowestLevel, setLowestLevel] = useState(0);
+  const [responseTime, setResponseTime] = useState(0);
+  const [blockDelay, setBlockDelay] = useState(0);
 
   // *Fetch device information automatically when "Device Info" is selected
   useEffect(() => {
@@ -223,7 +235,7 @@ function Tabs() {
                     value={fullScale}
                     onChange={(e) => setFullScale(parseInt(e.target.value))}
                     min={0}
-                    max={1000}
+                    max={100000}
                     step={1}
                     style={{ marginLeft: "1rem", width: "100px" }}
                   />
@@ -235,13 +247,13 @@ function Tabs() {
                         fullScale
                       );
                       if (success) {
-                        console.log("✅ Full Scale updated!");
+                        console.log(" Full Scale updated!");
 
                         // Optional: re-fetch to confirm visually
                         const updated = await readDeviceSettings();
                         setDeviceSettings(updated);
                       } else {
-                        console.log("❌ Failed to update Full Scale.");
+                        console.log(" Failed to update Full Scale.");
                       }
                     }}
                   >
@@ -251,18 +263,193 @@ function Tabs() {
               </p>
               <p>
                 <strong>Alarm Level:</strong> {deviceSettings.alarmLevel}
+                <div>
+                  <label htmlFor="alarmLevel-input">
+                    <strong>Edit:</strong>
+                  </label>
+                  <input
+                    type="number"
+                    id="alarmLevel-input"
+                    value={alarmLevel}
+                    onChange={(e) => setAlarmLevel(parseInt(e.target.value))}
+                    min={0}
+                    max={100000}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeDeviceSetting(
+                        alarmLevelUUID,
+                        alarmLevel
+                      );
+                      if (success) {
+                        console.log(" alarmLevel updated!");
+
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readDeviceSettings();
+                        setDeviceSettings(updated);
+                      } else {
+                        console.log(" Failed to update alarmLevel.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </p>
               <p>
                 <strong>Warn Level:</strong> {deviceSettings.warnLevel}
+                <div>
+                  <label htmlFor="warn-level-input">
+                    <strong>Edit:</strong>
+                  </label>
+                  <input
+                    type="number"
+                    id="warn-level-input"
+                    value={warnLevel}
+                    onChange={(e) => setWarnLevel(parseInt(e.target.value))}
+                    min={0}
+                    max={100000}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeDeviceSetting(
+                        warnLevelUUID,
+                        warnLevel
+                      );
+                      if (success) {
+                        console.log("Warn Level updated!");
+
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readDeviceSettings();
+                        setDeviceSettings(updated);
+                      } else {
+                        console.log(" Failed to update Warn Level.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </p>
               <p>
                 <strong>Lowest Level:</strong> {deviceSettings.lowestLevel}
+                <div>
+                  <label htmlFor="lowest-lavel-input">
+                    <strong>Edit:</strong>
+                  </label>
+                  <input
+                    type="number"
+                    id="lowest-lavel-input"
+                    value={lowestLevel}
+                    onChange={(e) => setLowestLevel(parseInt(e.target.value))}
+                    min={0}
+                    max={100000}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeDeviceSetting(
+                        lowestLevelUUID,
+                        lowestLevel
+                      );
+                      if (success) {
+                        console.log("Lowest Level updated!");
+
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readDeviceSettings();
+                        setDeviceSettings(updated);
+                      } else {
+                        console.log("❌ Failed to update Lowest Level.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </p>
               <p>
                 <strong>Response Time:</strong> {deviceSettings.responseTime}
+                <div>
+                  <label htmlFor="response-time-input">
+                    <strong>Edit:</strong>
+                  </label>
+                  <input
+                    type="number"
+                    id="response-time-input"
+                    value={responseTime}
+                    onChange={(e) => setResponseTime(parseInt(e.target.value))}
+                    min={0}
+                    max={100000}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeDeviceSetting(
+                        responseTimeUUID,
+                        responseTime
+                      );
+                      if (success) {
+                        console.log("Response Time updated!");
+
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readDeviceSettings();
+                        setDeviceSettings(updated);
+                      } else {
+                        console.log("❌ Failed to update Response Time.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </p>
               <p>
                 <strong>Block Delay:</strong> {deviceSettings.blockDelay}
+                <div>
+                  <label htmlFor="block-delay-input">
+                    <strong>Edit:</strong>
+                  </label>
+                  <input
+                    type="number"
+                    id="block-delay-input"
+                    value={blockDelay}
+                    onChange={(e) => setBlockDelay(parseInt(e.target.value))}
+                    min={0}
+                    max={100000}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeDeviceSetting(
+                        blockDelayUUID,
+                        blockDelay
+                      );
+                      if (success) {
+                        console.log("Block Delay updated!");
+
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readDeviceSettings();
+                        setDeviceSettings(updated);
+                      } else {
+                        console.log("❌ Failed to update Block Delay.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </p>
 
               <p>

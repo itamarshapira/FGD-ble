@@ -64,6 +64,18 @@ function Navbar() {
         <span className="battery-text">{batteryLevel}%</span>{" "}
         {/* Battery percentage */}
       </div>
+      {/* Connection Status Message */}
+      <div className="connection-status">
+        {isConnected ? (
+          <span style={{ color: "limegreen", fontWeight: "bold" }}>
+            Connected
+          </span>
+        ) : (
+          <span style={{ color: "crimson", fontWeight: "bold" }}>
+            You need to Connect
+          </span>
+        )}
+      </div>
     </div>
   );
 }
