@@ -90,14 +90,20 @@ function Tabs() {
   }, [activeTab]); // Runs every time activeTab changes
 
   // *fetch Alert Status
+  // Reusable fetch function -> fetchAlertStatus():
+  // This function reads the alert status from the BLE device and updates the state
+  // did it to use refresh btn to re-fetch the alert status.
+  const fetchAlertStatus = async () => {
+    const status = await readAlertStatus();
+    setAlertStatus(status);
+    console.log(" Alert Status (test):", status);
+  };
+
+  // *Use useEffect to call fetchAlertStatus when the "Alert Status" tab is active
+  // or when fetchAlertStatus() is called.
   useEffect(() => {
     if (activeTab === "Alert Status") {
-      async function fetchAlert() {
-        const status = await readAlertStatus();
-        setAlertStatus(status);
-        console.log(" Alert Status (test):", status);
-      }
-      fetchAlert();
+      fetchAlertStatus();
     }
   }, [activeTab]);
 
@@ -162,15 +168,30 @@ function Tabs() {
       content: (
         <div>
           <h2>Alert Notification Status</h2>
+          <button className="refresh-button" onClick={fetchAlertStatus}>
+            🔄 Refresh
+          </button>
           {alertStatus === null ? (
             <p>Reading alert status...</p>
+          ) : alertStatus === 0 ? (
+            <p>All clear — no alerts active.</p>
           ) : (
-            <p>
-              <strong>Status:</strong>{" "}
-              {alertStatus === 0
-                ? "All clear"
-                : `Raw: 0x${alertStatus.toString(16).padStart(2, "0")}`}
-            </p>
+            <div>
+              <p>
+                <strong>Status word:</strong> 0x
+                {alertStatus.toString(16).padStart(4, "0").toUpperCase()}
+              </p>
+              <ul>
+                {Array.from({ length: 16 }, (_, i) => {
+                  const isOn = (alertStatus & (1 << i)) !== 0;
+                  return (
+                    <li key={i}>
+                      Bit {i}: {isOn ? "ON (1)" : "OFF (0)"}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
         </div>
       ),
@@ -183,11 +204,17 @@ function Tabs() {
           {environmentalData ? (
             <div className="environmental-details">
               <p>
-                <strong>Methane Concentration:</strong>{" "}
-                {environmentalData.methane} ppm
+                <strong>
+                  Methane Concentration ({environmentalData.methaneLabel}):
+                </strong>{" "}
+                {environmentalData.methane}
               </p>
               <p>
-                <strong>LEL Status:</strong> {environmentalData.lelStatus}
+                <strong>Temperature:</strong> {environmentalData.temperature} °C
+              </p>
+              <p>
+                <strong>Measurement Interval:</strong>{" "}
+                {environmentalData.measurementInterval} seconds
               </p>
             </div>
           ) : (
@@ -223,45 +250,45 @@ function Tabs() {
           <h2>Device Settings</h2>
           {deviceSettings ? (
             <div className="device-settings">
-              <p>
+              <div>
                 <strong>Full Scale:</strong> {deviceSettings.fullScale}
-                <div>
-                  <label htmlFor="full-scale-input">
-                    <strong>Edit:</strong>
-                  </label>
-                  <input
-                    type="number"
-                    id="full-scale-input"
-                    value={fullScale}
-                    onChange={(e) => setFullScale(parseInt(e.target.value))}
-                    min={0}
-                    max={100000}
-                    step={1}
-                    style={{ marginLeft: "1rem", width: "100px" }}
-                  />
-                  <button
-                    style={{ marginLeft: "1rem" }}
-                    onClick={async () => {
-                      const success = await writeDeviceSetting(
-                        fullScaleUUID,
-                        fullScale
-                      );
-                      if (success) {
-                        console.log(" Full Scale updated!");
-
-                        // Optional: re-fetch to confirm visually
-                        const updated = await readDeviceSettings();
-                        setDeviceSettings(updated);
-                      } else {
-                        console.log(" Failed to update Full Scale.");
-                      }
-                    }}
-                  >
-                    Save
-                  </button>
-                </div>
-              </p>
-              <p>
+              </div>
+              <div>
+                <label htmlFor="full-scale-input">
+                  <strong>Edit:</strong>
+                </label>
+                <input
+                  type="number"
+                  id="full-scale-input"
+                  value={fullScale}
+                  onChange={(e) => setFullScale(parseInt(e.target.value))}
+                  min={0}
+                  max={100000}
+                  step={1}
+                  style={{ marginLeft: "1rem", width: "100px" }}
+                />
+                <button
+                  style={{ marginLeft: "1rem" }}
+                  onClick={async () => {
+                    const success = await writeDeviceSetting(
+                      fullScaleUUID,
+                      fullScale
+                    );
+                    if (success) {
+                      console.log(" Full Scale updated!");
+                      // Optional: re-fetch to confirm visually
+                      const updated = await readDeviceSettings();
+                      setDeviceSettings(updated);
+                    } else {
+                      console.log(" Failed to update Full Scale.");
+                    }
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+              <br />
+              <div>
                 <strong>Alarm Level:</strong> {deviceSettings.alarmLevel}
                 <div>
                   <label htmlFor="alarmLevel-input">
@@ -286,7 +313,6 @@ function Tabs() {
                       );
                       if (success) {
                         console.log(" alarmLevel updated!");
-
                         // Optional: re-fetch to confirm visually
                         const updated = await readDeviceSettings();
                         setDeviceSettings(updated);
@@ -298,8 +324,9 @@ function Tabs() {
                     Save
                   </button>
                 </div>
-              </p>
-              <p>
+              </div>
+              <br />
+              <div>
                 <strong>Warn Level:</strong> {deviceSettings.warnLevel}
                 <div>
                   <label htmlFor="warn-level-input">
@@ -324,7 +351,6 @@ function Tabs() {
                       );
                       if (success) {
                         console.log("Warn Level updated!");
-
                         // Optional: re-fetch to confirm visually
                         const updated = await readDeviceSettings();
                         setDeviceSettings(updated);
@@ -336,8 +362,10 @@ function Tabs() {
                     Save
                   </button>
                 </div>
-              </p>
-              <p>
+              </div>
+
+              <br />
+              <div>
                 <strong>Lowest Level:</strong> {deviceSettings.lowestLevel}
                 <div>
                   <label htmlFor="lowest-lavel-input">
@@ -362,7 +390,6 @@ function Tabs() {
                       );
                       if (success) {
                         console.log("Lowest Level updated!");
-
                         // Optional: re-fetch to confirm visually
                         const updated = await readDeviceSettings();
                         setDeviceSettings(updated);
@@ -374,8 +401,9 @@ function Tabs() {
                     Save
                   </button>
                 </div>
-              </p>
-              <p>
+              </div>
+              <br />
+              <div>
                 <strong>Response Time:</strong> {deviceSettings.responseTime}
                 <div>
                   <label htmlFor="response-time-input">
@@ -400,7 +428,6 @@ function Tabs() {
                       );
                       if (success) {
                         console.log("Response Time updated!");
-
                         // Optional: re-fetch to confirm visually
                         const updated = await readDeviceSettings();
                         setDeviceSettings(updated);
@@ -412,8 +439,9 @@ function Tabs() {
                     Save
                   </button>
                 </div>
-              </p>
-              <p>
+              </div>
+              <br />
+              <div>
                 <strong>Block Delay:</strong> {deviceSettings.blockDelay}
                 <div>
                   <label htmlFor="block-delay-input">
@@ -450,41 +478,40 @@ function Tabs() {
                     Save
                   </button>
                 </div>
-              </p>
-
-              <p>
+              </div>
+              <br />
+              <div>
                 <strong>Gas Type:</strong> {deviceSettings.selectedGasType}
-              </p>
-
-              <div style={{ marginTop: "1rem" }}>
-                <label htmlFor="gas-type-select">
-                  <strong>Select Gas Type:</strong>
-                </label>
-                <select
-                  id="gas-type-select"
-                  value={selectedGasType}
-                  onChange={(e) => setSelectedGasType(parseInt(e.target.value))}
-                >
-                  <option value={0}>Methane</option>
-                  <option value={1}>Propane</option>
-                  <option value={2}>Butane</option>
-                  <option value={3}>Hydrogen</option>
-                </select>
-
-                <button
-                  onClick={handleWriteGasType}
-                  style={{ marginLeft: "1rem" }}
-                >
-                  Save
-                </button>
-
-                {/*  Optional: Show current gas type label */}
-                <p style={{ marginTop: "0.5rem", color: "green" }}>
-                  Current Gas Type:{" "}
-                  <strong>
-                    {gasTypeLabel(deviceSettings.selectedGasType)}
-                  </strong>
-                </p>
+                <div style={{ marginTop: "1rem" }}>
+                  <label htmlFor="gas-type-select">
+                    <strong>Select Gas Type:</strong>
+                  </label>
+                  <select
+                    id="gas-type-select"
+                    value={selectedGasType}
+                    onChange={(e) =>
+                      setSelectedGasType(parseInt(e.target.value))
+                    }
+                  >
+                    <option value={0}>Methane</option>
+                    <option value={1}>Propane</option>
+                    <option value={2}>Butane</option>
+                    <option value={3}>Hydrogen</option>
+                  </select>
+                  <button
+                    onClick={handleWriteGasType}
+                    style={{ marginLeft: "1rem" }}
+                  >
+                    Save
+                  </button>
+                  {/*  Optional: Show current gas type label */}
+                  <p style={{ marginTop: "0.5rem", color: "green" }}>
+                    Current Gas Type:{" "}
+                    <strong>
+                      {gasTypeLabel(deviceSettings.selectedGasType)}
+                    </strong>
+                  </p>
+                </div>
               </div>
             </div>
           ) : (

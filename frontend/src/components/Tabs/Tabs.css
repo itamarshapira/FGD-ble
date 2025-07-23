@@ -74,3 +74,22 @@
     line-height: 1.4; /* Adjust line height for readability */
   }
 }
+
+.refresh-button {
+  background-color: #494c51; /* Blue color */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-top: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-button:hover {
+  background-color: #3f394c; /* Darker blue on hover */
+}

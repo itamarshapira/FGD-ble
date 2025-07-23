@@ -29,7 +29,8 @@ const alertStatusCharacteristicUUID = "00002a3f-0000-1000-8000-00805f9b34fb";
 //* Environmental Sensing
 const environmentalSensingUUID = "0000181a-0000-1000-8000-00805f9b34fb"; // PRIME 0x181A - PRIME
 const methaneConcentrationUUID = "00002bd1-0000-1000-8000-00805f9b34fb"; // 0x2BD1
-const unknownLELStatusUUID = "8ac32d3f-5cb9-4d44-bec2-ee689169f626"; // Custom
+const temperatureUUID = "00002a6e-0000-1000-8000-00805f9b34fb"; // 0x2A6E
+const measurementIntervalUUID = "00002a21-0000-1000-8000-00805f9b34fb"; // 0x2A21
 
 // * generic Access
 const genericAccessServiceUUID = "00001800-0000-1000-8000-00805f9b34fb"; // 0x1800 - PRIME
@@ -77,7 +78,7 @@ export async function connectToDevice() {
     logMessage("Requesting Bluetooth device...");
     device = await navigator.bluetooth.requestDevice({
       //* returns a BluetoothDevice object.
-      acceptAllDevices: true, //* Allow only filtered devices
+      //acceptAllDevices: true, //* Allow only filtered devices
       optionalServices: [
         batteryServiceUUID,
         deviceInformationServiceUUID,
@@ -86,14 +87,14 @@ export async function connectToDevice() {
         genericAccessServiceUUID,
         deviceSettingsServiceUUID,
       ], // Correctly formatted UUID
-      // filters: [{ namePrefix: devicePrefix }], //* Filter devices by prefix
+      filters: [{ namePrefix: "FG" }, { namePrefix: "fg" }], //* Filter devices by prefix
       // optionalServices: [serviceId], //* Specify desired service UUID
     });
 
     logMessage(`Connecting to GATT server of device: ${device.name}`);
     gattServer = await device.gatt.connect(); //* Establish GATT connection --> The returning BLE Object from above have a device that has a gatt property that represents the GATT server inside the device
     // gatt.connect() starts a Bluetooth connection.
-
+    logMessage("Selected device: " + device.name);
     logMessage("Connected to GATT server!");
 
     //LOGIC: Discover and log services and characteristics
@@ -250,10 +251,32 @@ export async function readAlertStatus() {
     const value = await characteristic.readValue();
     const alertStatus = value.getUint8(0); // Returns 0–255 value
 
+    // Step 4: Decode each bit
+    // const ringerActive = (alertStatus & 0x01) !== 0; // Chake if Bit 0 is on 1 if so rise a flag (001)
+    // const vibrateActive = (alertStatus & 0x02) !== 0; // Chake if Bit 1 is on 1 if so rise a flag (010)
+    // const displayActive = (alertStatus & 0x04) !== 0; // Chake if Bit 2 is on 1 if so rise a flag (100)
+
+    const activeBits = [];
+
+    for (let i = 0; i < 16; i++) {
+      const isActive = (alertStatus & (1 << i)) !== 0;
+      activeBits.push({ bit: i, status: isActive });
+    }
+
+    // Step 5: Log decoded status
     logMessage(
       `Alert Status (hex): 0x${alertStatus.toString(16).padStart(2, "0")}`
     );
+    activeBits.forEach(({ bit, status }) => {
+      logMessage(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
+    });
+    // Example output:
+    // Alert Status (hex): 0x04
+    // → Bit 0: OFF (0)
+    // → Bit 1: OFF (0)
+    // → Bit 2: ON (1)
 
+    // Step 6: Return the alert status
     return alertStatus;
   } catch (error) {
     logMessage(`Error reading Alert Status: ${error.message}`);
@@ -288,20 +311,44 @@ export async function readEnvironmentalData() {
       methaneConcentrationUUID
     );
     const methaneValue = await methaneChar.readValue();
-    const methane = methaneValue.getUint16(0, true); // little-endian → ppm
+    const methane = methaneValue.getUint16(0, false); // little-endian → ppm
     logMessage(`Methane Concentration: ${methane} ppm`);
 
-    // --- LEL Status (custom UUID) ---
-    const lelChar = await service.getCharacteristic(unknownLELStatusUUID);
-    const lelValue = await lelChar.readValue();
-    const decoder = new TextDecoder("utf-8");
-    const lelStatus = decoder.decode(lelValue).replace(/\0/g, "");
-    logMessage(`LEL Status: ${lelStatus}`);
+    // --- Descriptor 0x2901: Characteristic User Description (LEL label) ---
+    const descriptors = await methaneChar.getDescriptors();
+    const userDescDescriptor = descriptors.find(
+      (d) => d.uuid === "00002901-0000-1000-8000-00805f9b34fb"
+    );
 
-    return {
-      methane,
-      lelStatus,
-    };
+    let methaneLabel = "Unknown";
+    if (userDescDescriptor) {
+      const descValue = await userDescDescriptor.readValue();
+      const decoder = new TextDecoder("utf-8");
+      methaneLabel = decoder.decode(descValue).replace(/\0/g, "");
+      logMessage(`Methane Descriptor Label: ${methaneLabel}`);
+
+      // --- Temperature (0x2A6E) ---
+      const tempChar = await service.getCharacteristic(temperatureUUID);
+      const tempValue = await tempChar.readValue();
+      const temperatureRaw = tempValue.getUint16(0, true); // spec says little-endian
+      const temperature = temperatureRaw / 100; // convert to °C
+      logMessage(`Temperature: ${temperature.toFixed(2)} °C`);
+
+      // --- Measurement Interval (0x2A21) ---
+      const intervalChar = await service.getCharacteristic(
+        measurementIntervalUUID
+      );
+      const intervalValue = await intervalChar.readValue();
+      const interval = intervalValue.getUint16(0, true); // seconds
+      logMessage(`Measurement Interval: ${interval} seconds`);
+
+      return {
+        methane,
+        methaneLabel, // Return the label from the descriptor
+        temperature: temperature.toFixed(2), // Return temperature as a string with 2 decimal places
+        measurementInterval: interval, // Return measurement interval in seconds
+      };
+    }
   } catch (error) {
     logMessage(`Error reading environmental data: ${error.message}`);
     return null;
@@ -338,7 +385,7 @@ export async function readGenericAccess() {
     // Read Appearance
     const appearanceChar = await service.getCharacteristic(appearanceUUID);
     const appearanceValue = await appearanceChar.readValue();
-    const appearanceCode = appearanceValue.getUint16(0, true); // Read 2 bytes, little-endian
+    const appearanceCode = appearanceValue.getUint16(0, false); // Read 2 bytes, little-endian
 
     // Map known appearance codes (expand if needed)
     const appearanceText =
@@ -373,7 +420,7 @@ export async function readDeviceSettings() {
     const readCharValue = async (uuid) => {
       const char = await service.getCharacteristic(uuid);
       const value = await char.readValue();
-      return value.getUint16(0, true); // Read 2 bytes, little endian
+      return value.getUint16(0, false); // Read 2 bytes, little endian
     };
 
     const fullScale = await readCharValue(fullScaleUUID);
@@ -430,7 +477,7 @@ export async function writeDeviceSetting(uuid, value) {
     // Step 3: Convert the value to a binary format (2 bytes, little-endian)
     const buffer = new ArrayBuffer(2); // Allocate 2 bytes
     const view = new DataView(buffer);
-    view.setUint16(0, value, true); // Write the value into the buffer, little endian
+    view.setUint16(0, value, false); // Write the value into the buffer, little endian
 
     // Step 4: Write the value to the BLE device
     await characteristic.writeValue(buffer);
