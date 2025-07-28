@@ -17,6 +17,7 @@ import {
   responseTimeUUID,
   blockDelayUUID,
 } from "../../services/bleService";
+import VideoStream from "../VideoStream/VideoStream";
 
 /**
  * Tabs Component:
@@ -138,7 +139,7 @@ function Tabs() {
 
   // *Array of tabs: Each tab has a name and corresponding content
   const tabs = [
-    { name: "Device Data", content: <DeviceData /> },
+    { name: "Device Data (demo)", content: <DeviceData /> },
     {
       name: "Device Info",
       content: (
@@ -520,7 +521,12 @@ function Tabs() {
         </div>
       ),
     },
-    { name: "params3", content: "Content for Params_3" },
+    { name: "New Content", content: "Content for new content" },
+    {
+      name: "Video Stream",
+      content: <VideoStream />,
+    },
+
     {
       name: "Welcome",
       content: (

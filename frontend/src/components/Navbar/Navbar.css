@@ -4,7 +4,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    background-color: rgb(31, 31, 31); /* Slightly brighter background */
+    background-color: rgb(168, 210, 227); /* Slightly brighter background 31 31 31 - origin*/
     color: rgb(230, 230, 230);
     padding: 15px 20px;
     
@@ -67,7 +67,7 @@
     align-items: center;
     gap: 8px;
     margin-left: auto; /* Push battery state to the right */
-    background-color: rgb(45, 45, 45); /* Slightly different background for contrast */
+    background-color: rgb(165, 203, 214); /* Slightly different background for contrast 45 45 45  origin */
     padding: 6px 12px; /* Add padding */
     border-radius: 5px; /* Rounded edges */
   }
@@ -88,4 +88,8 @@
   .connection-status {
   margin-left: 1rem;
   font-size: 0.95rem;
+}
+
+.nav_logo {
+  margin: 0 150px; /* Adds horizontal space around the logo */
 }
