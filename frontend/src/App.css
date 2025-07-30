@@ -9,6 +9,8 @@
   display: flex;
   flex-direction: column; /* Stack items vertically */
   min-height: 100vh; /* Full height of the viewport */
+
+  overflow-x: hidden; /* 🔒 Prevent horizontal scroll */
 }
 
 /* Make Tabs (or the content area) grow to fill available space */

@@ -4,7 +4,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    background-color: rgb(168, 210, 227); /* Slightly brighter background 31 31 31 - origin*/
+    background-color: rgb(31, 31,31); /* Slightly brighter background 31 31 31 - origin*/
     color: rgb(230, 230, 230);
     padding: 15px 20px;
     
@@ -32,9 +32,10 @@
   }
 
 /* Bluetooth icon turns red on hover ONLY when connected */
-.navbar-icon.connected:hover {
-  color: red;
+.navbar-icon.connected {
+  color: limegreen;
 }
+
   
   /* Tooltip styling */
   .navbar-tooltip {
@@ -67,7 +68,7 @@
     align-items: center;
     gap: 8px;
     margin-left: auto; /* Push battery state to the right */
-    background-color: rgb(165, 203, 214); /* Slightly different background for contrast 45 45 45  origin */
+    background-color: rgb(45, 45, 45); /* Slightly different background for contrast 45 45 45  origin */
     padding: 6px 12px; /* Add padding */
     border-radius: 5px; /* Rounded edges */
   }
@@ -90,6 +91,51 @@
   font-size: 0.95rem;
 }
 
-.nav_logo {
-  margin: 0 150px; /* Adds horizontal space around the logo */
+.navbar-logo img {
+  height: 30px; /* Adjust size as needed */
+  width: auto;
+  object-fit: contain;
+  margin-right: 2rem; /* Space between logo and other elements */
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    flex-wrap: wrap; /* allow wrap if needed */
+    justify-content: space-between;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .navbar-logo img {
+    height: 22px;
+    margin-right: 1rem;
+  }
+
+  .battery-state {
+    padding: 4px 6px;
+    gap: 4px;
+    font-size: 0.8rem;
+  }
+
+  .battery-icon {
+    font-size: 20px;
+  }
+
+  .battery-text {
+    font-size: 14px;
+  }
+
+  .navbar-icon {
+    font-size: 22px;
+  }
+
+  .connection-status {
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+  }
+
+  .navbar-tooltip {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
 }

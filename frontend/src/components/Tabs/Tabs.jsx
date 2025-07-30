@@ -18,6 +18,8 @@ import {
   blockDelayUUID,
 } from "../../services/bleService";
 import VideoStream from "../VideoStream/VideoStream";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
 /**
  * Tabs Component:
@@ -119,6 +121,14 @@ function Tabs() {
     }
   }, [activeTab]);
 
+  // *Reusable fetch function for environmental data
+  // This function reads the environmental data from the BLE device and updates the state
+  const fetchEnvSensing = async () => {
+    const status = await readEnvironmentalData();
+    setEnvironmentalData(status);
+    console.log(" Environmental Data (test):", status);
+  };
+
   // *fetch generic acsses
   useEffect(() => {
     if (activeTab === "Generic Access") {
@@ -170,7 +180,7 @@ function Tabs() {
         <div>
           <h2>Alert Notification Status</h2>
           <button className="refresh-button" onClick={fetchAlertStatus}>
-            🔄 Refresh
+            <FontAwesomeIcon icon={faDownload} />
           </button>
           {alertStatus === null ? (
             <p>Reading alert status...</p>
@@ -202,6 +212,9 @@ function Tabs() {
       content: (
         <div>
           <h2>Environmental Sensing</h2>
+          <button className="refresh-button" onClick={fetchEnvSensing}>
+            <FontAwesomeIcon icon={faDownload} />
+          </button>
           {environmentalData ? (
             <div className="environmental-details">
               <p>
@@ -209,9 +222,11 @@ function Tabs() {
                   Methane Concentration ({environmentalData.methaneLabel}):
                 </strong>{" "}
                 {environmentalData.methane}
+                <hr />
               </p>
               <p>
                 <strong>Temperature:</strong> {environmentalData.temperature} °C
+                <hr />
               </p>
               <p>
                 <strong>Measurement Interval:</strong>{" "}
@@ -560,26 +575,24 @@ function Tabs() {
 
   return (
     <div className="tabs">
-      {/* Tab buttons: Dynamically render buttons for each tab */}
-      <div className="tab-buttons">
+      {/*  Collapsible Dropdown for All Screens */}
+      <select
+        className="tab-dropdown"
+        value={activeTab}
+        onChange={(e) => handleTabClick(e.target.value)}
+      >
         {tabs.map((tab) => (
-          <button
-            key={tab.name} // Unique key for each button (required in lists)
-            className={`tab-button ${activeTab === tab.name ? "active" : ""}`} // * if true : tab-button beacame tab-button.active
-            onClick={() => handleTabClick(tab.name)} // Change active tab
-          >
+          <option key={tab.name} value={tab.name}>
             {tab.name}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
 
-      {/* Tab content: Dynamically render content for the active tab */}
+      {/*  Tab content for the active tab */}
       <div className="tab-content">
         {tabs.map(
           (tab) =>
-            activeTab === tab.name && (
-              <div key={tab.name}>{tab.content}</div> // Render content if tab is active
-            )
+            activeTab === tab.name && <div key={tab.name}>{tab.content}</div>
         )}
       </div>
     </div>
@@ -588,90 +601,30 @@ function Tabs() {
 
 export default Tabs;
 
-//* The regular code (less dynmic):
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// import React, { useState } from "react";
-// import "./Tabs.css";
-// import Logo from "../Logo/Logo"; // Importing the Logo component
-
-// /**
-//  * Tabs Component:
-//  * Manages dynamic content switching between different tabs.
-//  * Each tab has a button that displays specific content when clicked.
-//  */
-
-// function Tabs() {
-
-//   const [activeTab, setActiveTab] = useState("Wellcome");
-
-//   const handleTabClick = (tabName) => {
-//     setActiveTab(tabName); // Set the clicked tab as the active tab
-//   };
-
-//   return (
+// * This is the original code (return part) for the Tabs component before the dropdown was added.
+//  return (
 //     <div className="tabs">
-//       {/* Tab buttons: Render one button per tab */}
+//       {/* Tab buttons: Dynamically render buttons for each tab */}
 //       <div className="tab-buttons">
-//         {/* Tab button for Params_1 */}
-//         <button
-//           className={`tab-button ${activeTab === "params1" ? "active" : ""}`} // Highlight active tab
-//           onClick={() => handleTabClick("params1")} // Change active tab to Params_1
-//         >
-//           Params_1
-//         </button>
-
-//         {/* Tab button for Params_2 */}
-//         <button
-//           className={`tab-button ${activeTab === "params2" ? "active" : ""}`} // Highlight active tab
-//           onClick={() => handleTabClick("params2")} // Change active tab to Params_2
-//         >
-//           Params_2
-//         </button>
-
-//         {/* Tab button for Params_3 */}
-//         <button
-//           className={`tab-button ${activeTab === "params3" ? "active" : ""}`} // Highlight active tab
-//           onClick={() => handleTabClick("params3")} // Change active tab to Params_3
-//         >
-//           Params_3
-//         </button>
-
-//         {/* Tab button for Wellcome */}
-//         <button
-//           className={`tab-button ${activeTab === "Wellcome" ? "active" : ""}`} // Highlight active tab
-//           onClick={() => handleTabClick("Wellcome")} // Change active tab to Wellcome
-//         >
-//           Wellcome
-//         </button>
+//         {tabs.map((tab) => (
+//           <button
+//             key={tab.name} // Unique key for each button (required in lists)
+//             className={`tab-button ${activeTab === tab.name ? "active" : ""}`} // * if true : tab-button beacame tab-button.active
+//             onClick={() => handleTabClick(tab.name)} // Change active tab
+//           >
+//             {tab.name}
+//           </button>
+//         ))}
 //       </div>
 
-//       {/* Tab content: Render the content based on the active tab */}
+//       {/* Tab content: Dynamically render content for the active tab */}
 //       <div className="tab-content">
-//         {/* Content for Params_1 */}
-//         {activeTab === "params1" && <div>Content for Params_1</div>}
-
-//         {/* Content for Params_2 */}
-//         {activeTab === "params2" && <div>Content for Params_2</div>}
-
-//         {/* Content for Params_3 */}
-//         {activeTab === "params3" && <div>Content for Params_3</div>}
-
-//         {/* Content for Wellcome */}
-//         {activeTab === "Wellcome" && (
-//           <div>
-//             {/* Welcome message */}
-//             Welcome Lorem ipsum dolor sit amet consectetur adipisicing elit.
-//             Vero ipsam voluptate non cumque amet corporis repellat. Similique
-//             alias, vel eaque, ut, soluta earum eius voluptatem quis commodi quam
-//             fuga excepturi?
-//             {/* Include the Logo component */}
-//             <Logo />
-//           </div>
+//         {tabs.map(
+//           (tab) =>
+//             activeTab === tab.name && (
+//               <div key={tab.name}>{tab.content}</div> // Render content if tab is active
+//             )
 //         )}
 //       </div>
 //     </div>
 //   );
-// }
-
-// export default Tabs;

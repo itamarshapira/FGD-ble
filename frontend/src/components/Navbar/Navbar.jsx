@@ -9,6 +9,7 @@ import {
   readBatteryLevel,
 } from "../../services/bleService"; //* Import BLE service functions
 import "./Navbar.css"; //* Import Navbar-specific CSS for styling
+import logo from "./wideLogo.png"; //* Import the logo image
 
 /**
  * The Navbar component handles:
@@ -44,6 +45,9 @@ function Navbar() {
 
   return (
     <div className="navbar">
+      <div className="navbar-logo">
+        <img src={logo} alt="FGD Logo" />
+      </div>
       {/* Bluetooth icon with tooltip */}
       <div className="bluetooth-container">
         <FontAwesomeIcon

@@ -93,3 +93,37 @@
 .refresh-button:hover {
   background-color: #3f394c; /* Darker blue on hover */
 }
+
+/* Dropdown (collapsible bar) styling */
+.tab-dropdown {
+  width: 25%;
+  
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  font-size: 16px;
+  background-color: rgb(80, 80, 80);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  appearance: none; /* Remove default arrow in some browsers */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='12' height='7' viewBox='0 0 12 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='white' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  cursor: pointer;
+}
+
+/* Dropdown hover and focus */
+.tab-dropdown:hover,
+.tab-dropdown:focus {
+  background-color: rgb(60, 60, 60);
+  outline: none;
+}
+
+/* Mobile optimizations */
+@media (max-width: 600px) {
+  .tab-dropdown {
+    width: 60%; /* Wider dropdown on smaller screens */
+  }}
