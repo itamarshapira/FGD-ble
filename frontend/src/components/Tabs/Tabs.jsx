@@ -16,10 +16,23 @@ import {
   lowestLevelUUID,
   responseTimeUUID,
   blockDelayUUID,
+  startMethaneNotifications,
+  stopMethaneNotifications,
+  startTemperatureNotifications,
+  stopTemperatureNotifications,
+  writeMeasurementInterval,
+  measurementIntervalUUID,
+  toggleAlertStatusNotify,
 } from "../../services/bleService";
 import VideoStream from "../VideoStream/VideoStream";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faCheckDouble } from "@fortawesome/free-solid-svg-icons";
+import { faN } from "@fortawesome/free-solid-svg-icons/faN";
+import {
+  readMediaControlPoint,
+  writeMediaControlPoint,
+} from "../../services/mediaControl"; // Importing the media control service
 
 /**
  * Tabs Component:
@@ -33,12 +46,16 @@ function Tabs() {
   const [deviceInfo, setDeviceInfo] = useState(null); // Store device information
 
   const [alertStatus, setAlertStatus] = useState(null); // store alert status
+  const [alertNotifyOn, setAlertNotifyOn] = useState(false); // track ON/OFF state
 
   const [environmentalData, setEnvironmentalData] = useState(null); // store Enviromental Sensing
 
   const [genericAccessInfo, setGenericAccessInfo] = useState(null); // store genericAccessInfo
 
   const [deviceSettings, setDeviceSettings] = useState(null); // store device settings
+
+  const [mediaControlValue, setMediaControlValue] = useState(null); // store Media Control Point value
+  const [mediaControlInput, setMediaControlInput] = useState(0); // input to write to Media Control Point
 
   const [selectedGasType, setSelectedGasType] = useState(0); // default to Methane
   const gasTypeLabel = (value) => {
@@ -63,13 +80,13 @@ function Tabs() {
       selectedGasType
     );
     if (success) {
-      console.log("✅ Gas type updated!");
+      console.log(" Gas type updated!");
 
       //  re-fetch and sync again
       const updatedSettings = await readDeviceSettings();
       setDeviceSettings(updatedSettings);
     } else {
-      console.log("❌ Failed to update gas type.");
+      console.log(" Failed to update gas type.");
     }
   };
 
@@ -129,6 +146,48 @@ function Tabs() {
     console.log(" Environmental Data (test):", status);
   };
 
+  // *State to track if methane notifications are active
+  const [isMethaneStreaming, setIsMethaneStreaming] = useState(false); // State to track if methane notifications are active
+
+  // * Function to toggle methane streaming notifications - This function starts or stops the methane notifications based on the current state
+  const toggleMethaneStream = async () => {
+    if (isMethaneStreaming) {
+      await stopMethaneNotifications();
+      setIsMethaneStreaming(false);
+    } else {
+      await startMethaneNotifications((value) => {
+        // Update only methane field in environmentalData state
+        setEnvironmentalData((prev) => ({
+          ...prev,
+          methane: value,
+        }));
+      });
+      setIsMethaneStreaming(true);
+    }
+  };
+
+  // * State to track if temperature notifications are active
+  const [isTemperatureStreaming, setIsTemperatureStreaming] = useState(false);
+
+  // * Function to toggle temperature streaming notifications
+  const toggleTemperatureStream = async () => {
+    if (isTemperatureStreaming) {
+      await stopTemperatureNotifications();
+      setIsTemperatureStreaming(false);
+    } else {
+      await startTemperatureNotifications((value) => {
+        setEnvironmentalData((prev) => ({
+          ...prev,
+          temperature: value.toFixed(2),
+        }));
+      });
+      setIsTemperatureStreaming(true);
+    }
+  };
+
+  // * State to track the measurement interval
+  const [measurementInterval, setMeasurementInterval] = useState(0);
+
   // *fetch generic acsses
   useEffect(() => {
     if (activeTab === "Generic Access") {
@@ -146,6 +205,19 @@ function Tabs() {
       fetchSettings();
     }
   }, [activeTab]);
+
+  //* media control point
+  useEffect(() => {
+    if (activeTab === "Media Control Point") {
+      // Fetch the current value of the Media Control Point characteristic
+      fetchMediaControlPoint();
+    }
+  }, [activeTab]);
+
+  const fetchMediaControlPoint = async () => {
+    const value = await readMediaControlPoint();
+    setMediaControlValue(value);
+  };
 
   // *Array of tabs: Each tab has a name and corresponding content
   const tabs = [
@@ -182,6 +254,18 @@ function Tabs() {
           <button className="refresh-button" onClick={fetchAlertStatus}>
             <FontAwesomeIcon icon={faDownload} />
           </button>
+          <button
+            onClick={async () => {
+              const result = await toggleAlertStatusNotify((newValue) => {
+                setAlertStatus(newValue);
+              });
+              setAlertNotifyOn(result); // true = started, false = stopped
+            }}
+            className={alertNotifyOn ? "btn-stop" : "btn-start"}
+          >
+            <FontAwesomeIcon icon={faN} />
+          </button>
+
           {alertStatus === null ? (
             <p>Reading alert status...</p>
           ) : alertStatus === 0 ? (
@@ -212,9 +296,13 @@ function Tabs() {
       content: (
         <div>
           <h2>Environmental Sensing</h2>
+          {/* Button to toggle methane notifications */}
+
+          {/*  Button to refresh environmental data */}
           <button className="refresh-button" onClick={fetchEnvSensing}>
             <FontAwesomeIcon icon={faDownload} />
           </button>
+
           {environmentalData ? (
             <div className="environmental-details">
               <p>
@@ -222,16 +310,61 @@ function Tabs() {
                   Methane Concentration ({environmentalData.methaneLabel}):
                 </strong>{" "}
                 {environmentalData.methane}
-                <hr />
+                <button
+                  onClick={toggleMethaneStream}
+                  className={isMethaneStreaming ? "btn-stop" : "btn-start"}
+                >
+                  <FontAwesomeIcon icon={faN} />
+                </button>
               </p>
+              <hr />
               <p>
                 <strong>Temperature:</strong> {environmentalData.temperature} °C
-                <hr />
+                <button
+                  onClick={toggleTemperatureStream}
+                  className={isTemperatureStreaming ? "btn-stop" : "btn-start"}
+                >
+                  <FontAwesomeIcon icon={faN} />
+                </button>
               </p>
-              <p>
+              <hr />
+              <div>
                 <strong>Measurement Interval:</strong>{" "}
                 {environmentalData.measurementInterval} seconds
-              </p>
+                <div>
+                  <strong>Edit:</strong>
+                  <input
+                    type="number"
+                    id="measurement-interval-input"
+                    value={measurementInterval} // Controlled input for measurement interval
+                    onChange={
+                      (e) => setMeasurementInterval(parseInt(e.target.value)) // Update state on input change
+                    }
+                    min={1}
+                    max={3600}
+                    step={1}
+                    style={{ marginLeft: "1rem", width: "100px" }}
+                  />
+                  <button
+                    style={{ marginLeft: "1rem" }}
+                    onClick={async () => {
+                      const success = await writeMeasurementInterval(
+                        measurementInterval
+                      );
+                      if (success) {
+                        console.log("Measurement Interval updated!");
+                        // Optional: re-fetch to confirm visually
+                        const updated = await readEnvironmentalData();
+                        setEnvironmentalData(updated); // Update state of environmental sensing (all of it maybe change just to interval in future)
+                      } else {
+                        console.log("Failed to update Measurement Interval.");
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <p>Loading environmental data...</p>
@@ -537,6 +670,55 @@ function Tabs() {
       ),
     },
     { name: "New Content", content: "Content for new content" },
+    {
+      name: "Media Control Point",
+      content: (
+        <div>
+          <h2>Media Control Point</h2>
+          <button className="refresh-button" onClick={fetchMediaControlPoint}>
+            <FontAwesomeIcon icon={faDownload} />
+          </button>
+
+          {mediaControlValue === null ? (
+            <p>Click to read the current mode.</p>
+          ) : (
+            <p>
+              <strong>Mode:</strong>{" "}
+              {mediaControlValue === 0
+                ? "Normal"
+                : mediaControlValue === 1
+                ? "Alignment"
+                : mediaControlValue === 2
+                ? "Zero Calibration"
+                : `Unknown (${mediaControlValue})`}
+            </p>
+          )}
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="2"
+              value={mediaControlInput}
+              onChange={(e) => setMediaControlInput(parseInt(e.target.value))}
+              style={{ width: "4rem", marginRight: "1rem" }}
+            />
+            <button
+              onClick={async () => {
+                const success = await writeMediaControlPoint(mediaControlInput);
+                if (success) {
+                  console.log("✅ Media Control Point updated!");
+                  fetchMediaControlPoint(); // Optional: re-read after update
+                } else {
+                  console.log("❌ Failed to update Media Control Point.");
+                }
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      ),
+    },
     {
       name: "Video Stream",
       content: <VideoStream />,

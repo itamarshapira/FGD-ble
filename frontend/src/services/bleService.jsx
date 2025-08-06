@@ -5,7 +5,7 @@
  ** Connecting and disconnecting devices.
  ** Interacting with BLE services and characteristics.
  */
-
+import { mediaControlServiceUUID } from "./mediaControl";
 const MOCK_MODE = false; //TEST Change to false when using the real device
 
 //const serviceId = "1b7e8251-2877-41c3-b46e-cf057c562023"; //* UUID for accessing specific BLE service
@@ -30,7 +30,7 @@ const alertStatusCharacteristicUUID = "00002a3f-0000-1000-8000-00805f9b34fb";
 const environmentalSensingUUID = "0000181a-0000-1000-8000-00805f9b34fb"; // PRIME 0x181A - PRIME
 const methaneConcentrationUUID = "00002bd1-0000-1000-8000-00805f9b34fb"; // 0x2BD1
 const temperatureUUID = "00002a6e-0000-1000-8000-00805f9b34fb"; // 0x2A6E
-const measurementIntervalUUID = "00002a21-0000-1000-8000-00805f9b34fb"; // 0x2A21
+export const measurementIntervalUUID = "00002a21-0000-1000-8000-00805f9b34fb"; // 0x2A21
 
 // * generic Access
 const genericAccessServiceUUID = "00001800-0000-1000-8000-00805f9b34fb"; // 0x1800 - PRIME
@@ -49,7 +49,7 @@ export const blockDelayUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078906";
 export const selectedGasTypeUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078907";
 
 let device = null; //* Variable to store connected device
-let gattServer = null; //* Variable to store GATT server instance --> (Generic Attribute Profile) is a protocol used in BLE communication. It defines how two BLE devices send and receive data between each other.
+export let gattServer = null; //* Variable to store GATT server instance --> (Generic Attribute Profile) is a protocol used in BLE communication. It defines how two BLE devices send and receive data between each other.
 
 export function logMessage(msg) {
   // * Logs messages to the console for debugging purposes.
@@ -86,6 +86,7 @@ export async function connectToDevice() {
         environmentalSensingUUID,
         genericAccessServiceUUID,
         deviceSettingsServiceUUID,
+        mediaControlServiceUUID,
       ], // Correctly formatted UUID
       filters: [{ namePrefix: "FG" }, { namePrefix: "fg" }], //* Filter devices by prefix
       // optionalServices: [serviceId], //* Specify desired service UUID
@@ -284,6 +285,77 @@ export async function readAlertStatus() {
   }
 }
 
+//* ---------------- Alert Notification start ----------------
+// Global to keep reference for stopping later
+let alertNotifyCharacteristic = null;
+
+/**
+ * Toggle Alert Status notifications (start/stop) and handle live updates
+ * @param {function} callback - called with new value on each notification
+ * @returns {boolean} true = started, false = stopped or failed
+ */
+export async function toggleAlertStatusNotify(callback) {
+  if (!gattServer) {
+    logMessage("Not connected to a device.");
+    return false;
+  }
+
+  //  Define FIRST
+  const handleValueChanged = (event) => {
+    const value = event.target.value.getUint8(0);
+    logMessage(
+      `📣 Alert Status (hex): 0x${value.toString(16).padStart(2, "0")}`
+    );
+
+    const activeBits = [];
+    for (let i = 0; i < 16; i++) {
+      const isActive = (value & (1 << i)) !== 0;
+      activeBits.push({ bit: i, status: isActive });
+    }
+
+    activeBits.forEach(({ bit, status }) => {
+      logMessage(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
+    });
+
+    if (callback) callback(value);
+  };
+
+  try {
+    const service = await gattServer.getPrimaryService(
+      alertNotificationServiceUUID
+    );
+    const characteristic = await service.getCharacteristic(
+      alertStatusCharacteristicUUID
+    );
+
+    if (alertNotifyCharacteristic) {
+      await alertNotifyCharacteristic.stopNotifications();
+      alertNotifyCharacteristic.removeEventListener(
+        "characteristicvaluechanged",
+        handleValueChanged // ✅ Now it's safe to access!
+      );
+      logMessage("🔕 Alert notifications stopped.");
+      alertNotifyCharacteristic = null;
+      return false;
+    }
+
+    await characteristic.startNotifications();
+    characteristic.addEventListener(
+      "characteristicvaluechanged",
+      handleValueChanged
+    );
+    logMessage("🔔 Alert notifications started.");
+
+    alertNotifyCharacteristic = characteristic;
+    return true;
+  } catch (error) {
+    logMessage(`❌ Failed to toggle alert notify: ${error.message}`);
+    return false;
+  }
+}
+
+//* ---------------- Alert Notification end ----------------
+
 //* READ Enviromental Sensing Function
 export async function readEnvironmentalData() {
   if (MOCK_MODE) {
@@ -310,6 +382,12 @@ export async function readEnvironmentalData() {
     const methaneChar = await service.getCharacteristic(
       methaneConcentrationUUID
     );
+    // Check what are the characteristic is supported
+    console.log(
+      "Characteristic properties for Methane Concentration:",
+      methaneChar.properties
+    );
+
     const methaneValue = await methaneChar.readValue();
     const methane = methaneValue.getUint16(0, false); // little-endian → ppm
     logMessage(`Methane Concentration: ${methane} ppm`);
@@ -334,6 +412,12 @@ export async function readEnvironmentalData() {
       const temperature = temperatureRaw / 100; // convert to °C
       logMessage(`Temperature: ${temperature.toFixed(2)} °C`);
 
+      // Check what are the characteristic is supported
+      console.log(
+        "Characteristic properties for Temperature Concentration:",
+        tempChar.properties
+      );
+
       // --- Measurement Interval (0x2A21) ---
       const intervalChar = await service.getCharacteristic(
         measurementIntervalUUID
@@ -354,6 +438,151 @@ export async function readEnvironmentalData() {
     return null;
   }
 }
+
+// * start notifications for methane concentration ------------------------
+
+// Global variable to track methane characteristic and listener
+let methaneChar = null;
+let methaneNotifyListener = null;
+
+/**
+ * *Start methane concentration notifications
+ * @param {(value: number) => void} callback - Callback to update UI with ppm
+ * - This function starts notifications for methane concentration changes.
+ */
+export async function startMethaneNotifications(callback) {
+  if (!gattServer) {
+    logMessage("No connected device. Connect first.");
+    return;
+  }
+
+  try {
+    const service = await gattServer.getPrimaryService(
+      environmentalSensingUUID //* Access the Environmental Sensing Service
+    );
+    methaneChar = await service.getCharacteristic(methaneConcentrationUUID); //* Get the Methane Concentration characteristic
+
+    await methaneChar.startNotifications(); //* Start notifications for the characteristic
+    logMessage(" Methane notifications started");
+
+    methaneNotifyListener = (event) => {
+      //* Listener for characteristic value changes
+      console.log(" Event received:", event);
+      const methaneValue = event.target.value; //* Get the value from the event
+      const methane = methaneValue.getUint16(0, true); // Read as little-endian
+      const time = new Date().toLocaleTimeString();
+      logMessage(`[${time}] Methane Notify: ${methane} lel`);
+      callback(methane); // send value to UI
+    };
+
+    methaneChar.addEventListener(
+      //* Add event listener for characteristic value changes
+      "characteristicvaluechanged",
+      methaneNotifyListener // This will be set later
+    );
+  } catch (error) {
+    logMessage(` Failed to start methane notifications: ${error.message}`);
+  }
+}
+
+/**
+ * *Stop methane notifications
+ */
+export async function stopMethaneNotifications() {
+  if (!methaneChar) {
+    logMessage(" Methane notify characteristic not set.");
+    return;
+  }
+
+  try {
+    await methaneChar.stopNotifications();
+    logMessage(" Methane notifications stopped");
+
+    if (methaneNotifyListener) {
+      methaneChar.removeEventListener(
+        "characteristicvaluechanged",
+        methaneNotifyListener
+      );
+      methaneNotifyListener = null;
+    }
+
+    methaneChar = null;
+  } catch (error) {
+    logMessage(`❌ Failed to stop methane notifications: ${error.message}`);
+  }
+}
+// * end notifications for methane concentration ------------------------
+
+//* startTemperatureNotifications ---------------------------
+
+// Global variables for temperature notification
+let temperatureChar = null;
+let temperatureNotifyListener = null;
+
+/**
+ * Start temperature notifications
+ * @param {(value: number) => void} callback - Function to receive updated temperature (°C)
+ */
+export async function startTemperatureNotifications(callback) {
+  if (!gattServer) {
+    logMessage("No connected device. Connect first.");
+    return;
+  }
+
+  try {
+    const service = await gattServer.getPrimaryService(
+      environmentalSensingUUID
+    );
+    temperatureChar = await service.getCharacteristic(temperatureUUID);
+
+    await temperatureChar.startNotifications();
+    logMessage(" Temperature notifications started");
+
+    temperatureNotifyListener = (event) => {
+      const tempData = event.target.value;
+      const raw = tempData.getUint16(0, true); // Read as little-endian
+      const temperature = raw / 100; // Convert to Celsius
+      logMessage(` Temperature Notify: ${temperature.toFixed(2)} °C`);
+      callback(temperature); // Send to React state
+    };
+
+    temperatureChar.addEventListener(
+      "characteristicvaluechanged",
+      temperatureNotifyListener
+    );
+  } catch (error) {
+    logMessage(` Failed to start temperature notifications: ${error.message}`);
+  }
+}
+
+/**
+ * Stop temperature notifications
+ */
+export async function stopTemperatureNotifications() {
+  if (!temperatureChar) {
+    logMessage("⚠️ Temperature notify characteristic not set.");
+    return;
+  }
+
+  try {
+    await temperatureChar.stopNotifications();
+    logMessage(" Temperature notifications stopped");
+
+    if (temperatureNotifyListener) {
+      temperatureChar.removeEventListener(
+        "characteristicvaluechanged",
+        temperatureNotifyListener
+      );
+      temperatureNotifyListener = null;
+    }
+
+    temperatureChar = null;
+  } catch (error) {
+    logMessage(` Failed to stop temperature notifications: ${error.message}`);
+  }
+}
+
+//* end Temperature Notifications ---------------------------
 
 //* readGenericAccess
 export async function readGenericAccess() {
@@ -485,7 +714,33 @@ export async function writeDeviceSetting(uuid, value) {
     logMessage(` Successfully wrote value ${value} to characteristic ${uuid}`);
     return true;
   } catch (error) {
-    logMessage(`❌ Failed to write to device setting: ${error.message}`);
+    logMessage(` Failed to write to device setting: ${error.message}`);
+    return false;
+  }
+}
+
+//* writeMeasurementInterval
+export async function writeMeasurementInterval(value) {
+  if (!gattServer) {
+    logMessage("No connected device. Connect first.");
+    return false;
+  }
+  try {
+    logMessage(`Writing Measurement Interval: ${value}`);
+    const service = await gattServer.getPrimaryService(
+      environmentalSensingUUID
+    );
+    const characteristic = await service.getCharacteristic(
+      measurementIntervalUUID
+    );
+    const buffer = new ArrayBuffer(2);
+    const view = new DataView(buffer);
+    view.setUint16(0, value, true); // little endian
+    await characteristic.writeValue(buffer);
+    logMessage(`Successfully wrote measurement interval: ${value}`);
+    return true;
+  } catch (error) {
+    logMessage(` Failed to write measurement interval: ${error.message}`);
     return false;
   }
 }

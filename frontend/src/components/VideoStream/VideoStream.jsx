@@ -10,7 +10,7 @@ function VideoStream() {
   const [ipAddress, setIpAddress] = useState("10.0.0.76");
   const [streamIp, setStreamIp] = useState("10.0.0.76"); //  only apply when button clicked
 
-  const streamUrl = `http://${streamIp}/live2.mjpeg`;
+  const streamUrl = `http://${streamIp}/live.mjpeg`;
   console.log("Stream URL:", streamUrl);
   const handleApplyIp = () => {
     setStreamIp(ipAddress); //  use current input only when clicking

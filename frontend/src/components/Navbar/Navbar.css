@@ -16,7 +16,7 @@
     margin-left: 10px;
     cursor: pointer;
     font-size: 26px; /* Slightly larger icon */
-    color: rgb(100, 149, 237); /* Cornflower blue color for the icon */
+    color: rgb(210, 0, 73); /* Cornflower blue color for the icon */
     transition: color 0.3s, transform 0.3s; /* Smooth hover effect */
   }
   
