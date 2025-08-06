@@ -21,13 +21,13 @@ import {
   startTemperatureNotifications,
   stopTemperatureNotifications,
   writeMeasurementInterval,
-  measurementIntervalUUID,
+  // measurementIntervalUUID,
   toggleAlertStatusNotify,
 } from "../../services/bleService";
 import VideoStream from "../VideoStream/VideoStream";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-import { faCheckDouble } from "@fortawesome/free-solid-svg-icons";
+//import { faCheckDouble } from "@fortawesome/free-solid-svg-icons";
 import { faN } from "@fortawesome/free-solid-svg-icons/faN";
 import {
   readMediaControlPoint,
