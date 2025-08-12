@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Tabs.css";
+import AlertBanner from "../AlertBanner/AlertBanner";
+import { ALERT_PRIORITY } from "../AlertBanner/AlertBanner"; // Importing the ALERT_PRIORITY constant
 import Logo from "../Logo/Logo"; // Importing the Logo component
 import { readDeviceInformation } from "../../services/bleService"; //* Import BLE service functions
 import DeviceData from "../DeviceData/DeviceData";
@@ -278,10 +280,13 @@ function Tabs() {
               </p>
               <ul>
                 {Array.from({ length: 16 }, (_, i) => {
-                  const isOn = (alertStatus & (1 << i)) !== 0;
+                  const mask = 1 << i;
+                  const isOn = (alertStatus & mask) !== 0;
+                  const alertInfo = ALERT_PRIORITY[mask];
                   return (
                     <li key={i}>
-                      Bit {i}: {isOn ? "ON (1)" : "OFF (0)"}
+                      Bit {i}: {alertInfo ? alertInfo.name : "Unknown"} —{" "}
+                      {isOn ? "ON" : "OFF"}
                     </li>
                   );
                 })}
@@ -758,6 +763,7 @@ function Tabs() {
   return (
     <div className="tabs">
       {/*  Collapsible Dropdown for All Screens */}
+      <AlertBanner alertStatus={alertStatus} />
       <select
         className="tab-dropdown"
         value={activeTab}

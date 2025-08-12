@@ -6,6 +6,7 @@ import Fotter from './components/Fotter/Fotter'
 import VideoStream from "./components/VideoStream/VideoStream";
 
 
+
     
     function App() {
       return (
@@ -13,7 +14,7 @@ import VideoStream from "./components/VideoStream/VideoStream";
           <Navbar />
           
           <VideoStream />
-          
+
           
           <Tabs />
           
