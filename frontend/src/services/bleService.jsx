@@ -249,8 +249,13 @@ export async function readAlertStatus() {
     );
 
     // Step 3: Read the value
-    const value = await characteristic.readValue();
-    const alertStatus = value.getUint8(0); // Returns 0–255 value
+    const value = await characteristic.readValue(); // the value is in HEX! -> cause the value from the device is in HEX
+    const alertStatus = value.getUint16(0); // Returns 0–255 value in DEC!
+    console.log(alertStatus); // log in DEC!
+    console.log(`Alert Status (dec): ${alertStatus}`);
+    console.log(
+      `Alert Status (hex): 0x${alertStatus.toString(16).padStart(2, "0")}`
+    );
 
     // Step 4: Decode each bit
     // const ringerActive = (alertStatus & 0x01) !== 0; // Chake if Bit 0 is on 1 if so rise a flag (001)
@@ -260,14 +265,12 @@ export async function readAlertStatus() {
     const activeBits = [];
 
     for (let i = 0; i < 16; i++) {
+      // Loop through each bit from 0 to 15
+
       const isActive = (alertStatus & (1 << i)) !== 0;
       activeBits.push({ bit: i, status: isActive });
     }
 
-    // Step 5: Log decoded status
-    logMessage(
-      `Alert Status (hex): 0x${alertStatus.toString(16).padStart(2, "0")}`
-    );
     activeBits.forEach(({ bit, status }) => {
       logMessage(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
     });
