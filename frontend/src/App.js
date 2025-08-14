@@ -1,28 +1,28 @@
-
+import { useState } from "react";
 import './App.css';
 import Tabs from './components/Tabs/Tabs';
 import Navbar from './components/Navbar/Navbar';
-import Fotter from './components/Fotter/Fotter'
+import Footer from './components/Fotter/Fotter';
 import VideoStream from "./components/VideoStream/VideoStream";
+import Welcome from './components/Welcome/Welcome';
 
+function App() {
+  const [isConnected, setIsConnected] = useState(false);
 
-
-    
-    function App() {
-      return (
-        <div className='app-container'>
-          <Navbar />
-          
+  return (
+    <div className="app-container">
+      <Navbar isConnected={isConnected} setIsConnected={setIsConnected} />
+      {isConnected ? (
+        <>
           <VideoStream />
-
-          
           <Tabs />
-          
-          <Fotter />
-        </div>
-      );
-    }
-    
-  
+        </>
+      ) : (
+        <div><Welcome /></div>
+      )}
+      <Footer /> {/* Always visible */}
+    </div>
+  );
+}
 
 export default App;

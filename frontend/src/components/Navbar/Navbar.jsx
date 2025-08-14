@@ -17,8 +17,8 @@ import logo from "./wideLogo.png"; //* Import the logo image
  * - Showing the battery level of connected BLE devices.
  * - Managing connection state and triggering BLE functions on user actions.
  */
-function Navbar() {
-  const [isConnected, setIsConnected] = useState(false); //* Track if a BLE device is connected
+function Navbar({ isConnected, setIsConnected }) {
+  //  const [isConnected, setIsConnected] = useState(false); //* Track if a BLE device is connected
   const [batteryLevel, setBatteryLevel] = useState("..."); //* Track the battery level of the connected device
   console.log(batteryLevel);
 

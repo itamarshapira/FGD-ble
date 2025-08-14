@@ -257,18 +257,13 @@ export async function readAlertStatus() {
       `Alert Status (hex): 0x${alertStatus.toString(16).padStart(2, "0")}`
     );
 
-    // Step 4: Decode each bit
-    // const ringerActive = (alertStatus & 0x01) !== 0; // Chake if Bit 0 is on 1 if so rise a flag (001)
-    // const vibrateActive = (alertStatus & 0x02) !== 0; // Chake if Bit 1 is on 1 if so rise a flag (010)
-    // const displayActive = (alertStatus & 0x04) !== 0; // Chake if Bit 2 is on 1 if so rise a flag (100)
-
+    // This loops over all 16 bits of the alertStatus number.
+    // (1 << i) shifts the number 1 left by i positions → creates a bitmask for each bit position.
     const activeBits = [];
-
     for (let i = 0; i < 16; i++) {
-      // Loop through each bit from 0 to 15
-
-      const isActive = (alertStatus & (1 << i)) !== 0;
-      activeBits.push({ bit: i, status: isActive });
+      // Loop through each bit from 0 to 15 and check if the number of alert status is active by the bit of i
+      const isActive = (alertStatus & (1 << i)) !== 0; // Check if the bit at position i is active
+      activeBits.push({ bit: i, status: isActive }); // (isActive is boolean)
     }
 
     activeBits.forEach(({ bit, status }) => {
@@ -281,7 +276,7 @@ export async function readAlertStatus() {
     // → Bit 2: ON (1)
 
     // Step 6: Return the alert status
-    return alertStatus;
+    return alertStatus; // decimal number
   } catch (error) {
     logMessage(`Error reading Alert Status: ${error.message}`);
     return null;

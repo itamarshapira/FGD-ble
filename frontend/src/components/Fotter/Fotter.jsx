@@ -29,7 +29,7 @@ function Fotter() {
           <FontAwesomeIcon icon={faLinkedinIn} />
         </a>
       </div>
-      <p>© 2025 Itamar Shapira - FG Detection. All rights reserved.</p>
+      <p>© 2025 Itamar Shapira - FGD. All rights reserved.</p>
     </div>
   );
 }

@@ -42,8 +42,8 @@ import {
  * based on a predefined list of tabs.
  */
 function Tabs() {
-  // State to keep track of the currently active tab (default: "Wellcome")
-  const [activeTab, setActiveTab] = useState("Welcome");
+  // State to keep track of the currently active tab (default: "Alert Status")
+  const [activeTab, setActiveTab] = useState("Alert Status");
 
   const [deviceInfo, setDeviceInfo] = useState(null); // Store device information
 
@@ -92,12 +92,12 @@ function Tabs() {
     }
   };
 
-  const [fullScale, setFullScale] = useState(0);
-  const [alarmLevel, setAlarmLevel] = useState(0);
-  const [warnLevel, setWarnLevel] = useState(0);
-  const [lowestLevel, setLowestLevel] = useState(0);
-  const [responseTime, setResponseTime] = useState(0);
-  const [blockDelay, setBlockDelay] = useState(0);
+  const [fullScale, setFullScale] = useState("");
+  const [alarmLevel, setAlarmLevel] = useState("");
+  const [warnLevel, setWarnLevel] = useState("");
+  const [lowestLevel, setLowestLevel] = useState("");
+  const [responseTime, setResponseTime] = useState("");
+  const [blockDelay, setBlockDelay] = useState("");
 
   // *Fetch device information automatically when "Device Info" is selected
   useEffect(() => {
@@ -420,6 +420,7 @@ function Tabs() {
                   max={100000}
                   step={1}
                   style={{ marginLeft: "1rem", width: "100px" }}
+                  placeholder="Full Scale"
                 />
                 <button
                   style={{ marginLeft: "1rem" }}
@@ -457,6 +458,7 @@ function Tabs() {
                     max={100000}
                     step={1}
                     style={{ marginLeft: "1rem", width: "100px" }}
+                    placeholder="Alarm Level"
                   />
                   <button
                     style={{ marginLeft: "1rem" }}
@@ -495,6 +497,7 @@ function Tabs() {
                     max={100000}
                     step={1}
                     style={{ marginLeft: "1rem", width: "100px" }}
+                    placeholder="Warn Level"
                   />
                   <button
                     style={{ marginLeft: "1rem" }}
@@ -534,6 +537,7 @@ function Tabs() {
                     max={100000}
                     step={1}
                     style={{ marginLeft: "1rem", width: "100px" }}
+                    placeholder="Lowest Level"
                   />
                   <button
                     style={{ marginLeft: "1rem" }}
@@ -572,6 +576,7 @@ function Tabs() {
                     max={100000}
                     step={1}
                     style={{ marginLeft: "1rem", width: "100px" }}
+                    placeholder="Response Time"
                   />
                   <button
                     style={{ marginLeft: "1rem" }}
@@ -610,6 +615,7 @@ function Tabs() {
                     max={100000}
                     step={1}
                     style={{ marginLeft: "1rem", width: "100px" }}
+                    placeholder="Block Delay"
                   />
                   <button
                     style={{ marginLeft: "1rem" }}
@@ -762,8 +768,10 @@ function Tabs() {
 
   return (
     <div className="tabs">
-      {/*  Collapsible Dropdown for All Screens */}
       <AlertBanner alertStatus={alertStatus} />
+      {/*sent the state to alert banner and sidpley him*/}
+
+      {/*  Collapsible Dropdown for All Screens */}
       <select
         className="tab-dropdown"
         value={activeTab}
@@ -775,7 +783,6 @@ function Tabs() {
           </option>
         ))}
       </select>
-
       {/*  Tab content for the active tab */}
       <div className="tab-content">
         {tabs.map(

@@ -39,3 +39,8 @@ border: 1px solid rgba(79, 70, 70, 0.27);
     transform: scale(1.2);
     color: #f39c12;
   }
+  .fotter p {
+    font-size: 12px;
+    color: #ccc;
+    margin-top: 10px;
+  }

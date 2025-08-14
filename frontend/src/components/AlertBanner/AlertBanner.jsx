@@ -1,4 +1,7 @@
 export const ALERT_PRIORITY = {
+  // look up table - dictonary (the same)
+  //JavaScript will immediately treat it as a normal number in decimal form internally.
+  //0x0200 -> 512
   0x0001: { name: "power_up", priority: 1 },
   0x0002: { name: "alignment", priority: 2 },
   0x0004: { name: "calib_mode", priority: 3 },
@@ -18,6 +21,7 @@ export const ALERT_PRIORITY = {
 };
 
 export default function AlertBanner({ alertStatus }) {
+  // alertStatus is decimal number here!
   const style = {
     background: "#cc1436ff",
     color: "#fff",
@@ -33,25 +37,32 @@ export default function AlertBanner({ alertStatus }) {
   if (alertStatus === 0) {
     return (
       <div style={{ ...style, background: "#20aa29ff" }}>
-        All clear — no alerts
+        All clear - no alerts
       </div>
     );
   } else if (alertStatus === null) {
     return <div></div>;
   }
 
-  // 🔍 Find all active alerts
-  const activeAlerts = Object.keys(ALERT_PRIORITY)
-    .map((hexKey) => {
-      const bitMask = parseInt(hexKey, 16);
-      if ((alertStatus & bitMask) !== 0) {
-        return ALERT_PRIORITY[bitMask];
-      }
-      return null;
-    })
-    .filter(Boolean);
+  // Find all active alerts using bit shifts instead of parsing hex strings
+  const activeAlerts = [];
 
-  // 🏆 Pick the highest priority one
+  for (let i = 0; i < 16; i++) {
+    const bitMask = 1 << i; // builds 1, 2, 4, 8, ..., 32768
+    if ((alertStatus & bitMask) !== 0) {
+      // If the bit is active, find its details from ALERT_PRIORITY
+      if (ALERT_PRIORITY[bitMask]) {
+        activeAlerts.push(ALERT_PRIORITY[bitMask]);
+      } else {
+        // Optional: handle unknown bit
+        activeAlerts.push({ name: `Unknown bit ${i}`, priority: 99 });
+      }
+    }
+  }
+
+  console.log("Active Alerts:", activeAlerts);
+
+  // Pick the highest priority
   const topAlert = activeAlerts.sort((a, b) => a.priority - b.priority)[0];
 
   return (
