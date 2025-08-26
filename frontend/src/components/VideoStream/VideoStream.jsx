@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import "./VideoStream.css"; // Optional: for styles
 import { faCamera } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { logMessage } from "../../services/bleService";
+// import { console.log } from "../../services/bleService";
 
 function VideoStream() {
   const [ipAddress, setIpAddress] = useState("10.0.0.76");
@@ -14,7 +14,7 @@ function VideoStream() {
   console.log("Stream URL:", streamUrl);
   const handleApplyIp = () => {
     setStreamIp(ipAddress); //  use current input only when clicking
-    logMessage(` IP applied: ${ipAddress}`);
+    console.log(` IP applied: ${ipAddress}`);
   };
 
   return (

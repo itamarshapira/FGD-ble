@@ -125,6 +125,29 @@
   gap: 6px;
 }
 
+.diagnostic-btn {
+  background-color: #494c51; /* Blue color */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-top: 10px;
+  margin: 0 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+.media-buttons{ background-color: #494c51; /* Blue color */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-top: 10px;
+  margin: 0 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;}
+
 /* Dropdown (collapsible bar) styling */
 .tab-dropdown {
   width: 25%;

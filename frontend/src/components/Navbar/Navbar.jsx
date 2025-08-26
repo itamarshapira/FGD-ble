@@ -76,7 +76,7 @@ function Navbar({ isConnected, setIsConnected }) {
           </span>
         ) : (
           <span style={{ color: "crimson", fontWeight: "bold" }}>
-            You need to Connect
+            Not Connected
           </span>
         )}
       </div>

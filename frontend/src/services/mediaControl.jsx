@@ -26,10 +26,10 @@ export async function readMediaControlPoint() {
       mediaControlPointUUID
     );
     const value = await characteristic.readValue();
+    console.log(`value byte size: ${value.byteLength}`); // tells you how many bytes came -> then i know how to read it !
 
-    const raw = value.getUint8(0); // Usually a small enum
+    const raw = value.getUint8(0); // Assuming the value is a single byte because it can be 0, 1, or 2
     console.log(`Media Control Point value: ${raw}`);
-    console.log("Media Control Point value: ,raw", raw);
 
     return raw;
   } catch (error) {
@@ -56,11 +56,12 @@ export async function writeMediaControlPoint(value) {
       mediaControlPointUUID
     );
 
-    const buffer = new ArrayBuffer(1);
-    const view = new DataView(buffer);
-    view.setUint8(0, value); // value should be 0, 1, or 2
+    //* creating a buffer -> with view we can write inside -> with setUnit8 we can set the value :
+    const buffer = new ArrayBuffer(1); // Create a buffer of 1 byte
+    const view = new DataView(buffer); // DataView provides methods like .setUint8, .getUint16, etc. to interpret those bytes as real numbers.
+    view.setUint8(0, value); // Writes the number into the buffer at position 0
 
-    await characteristic.writeValue(buffer);
+    await characteristic.writeValue(buffer); // Write the buffer to the characteristic
     console.log(" Media Control Point value written successfully.");
     return true;
   } catch (error) {

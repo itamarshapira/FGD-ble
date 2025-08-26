@@ -48,13 +48,16 @@ export const responseTimeUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078905";
 export const blockDelayUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078906";
 export const selectedGasTypeUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078907";
 
-let device = null; //* Variable to store connected device
+// This is the physical BLE device that you discover via navigator.bluetooth.requestDevice().
+let device = null; //* It represents the Bluetooth hardware object, and it has metadata like: device.name , device.id
+
+//This is created when you connect to the device. -> This is what actually gives you access to Reading, writing, and notifications services characteristics and so on..
 export let gattServer = null; //* Variable to store GATT server instance --> (Generic Attribute Profile) is a protocol used in BLE communication. It defines how two BLE devices send and receive data between each other.
 
-export function logMessage(msg) {
-  // * Logs messages to the console for debugging purposes.
-  console.log(msg);
-}
+// export function console.log(msg) {
+//   // * Logs messages to the console for debugging purposes.
+//   console.log(msg);
+// }
 
 /**
  ** Connects to a BLE device.
@@ -64,18 +67,18 @@ export function logMessage(msg) {
 export async function connectToDevice() {
   // test - MOCK_MODE - Start
   if (MOCK_MODE) {
-    logMessage("(MOCK) Simulating BLE connection...");
+    console.log("(MOCK) Simulating BLE connection...");
 
     // Simulate a delay to make it feel real
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    logMessage("(MOCK) Connected to fake device!");
+    console.log("(MOCK) Connected to fake device!");
     return true; // Indicate successful connection
   }
   // test - MOCK_MODE - END
 
   try {
-    logMessage("Requesting Bluetooth device...");
+    console.log("Requesting Bluetooth device...");
     device = await navigator.bluetooth.requestDevice({
       //* returns a BluetoothDevice object.
       //acceptAllDevices: true, //* Allow only filtered devices
@@ -92,17 +95,26 @@ export async function connectToDevice() {
       // optionalServices: [serviceId], //* Specify desired service UUID
     });
 
-    logMessage(`Connecting to GATT server of device: ${device.name}`);
+    console.log(`Connecting to GATT server of device: ${device.name}`);
     gattServer = await device.gatt.connect(); //* Establish GATT connection --> The returning BLE Object from above have a device that has a gatt property that represents the GATT server inside the device
     // gatt.connect() starts a Bluetooth connection.
-    logMessage("Selected device: " + device.name);
-    logMessage("Connected to GATT server!");
+    console.log("Selected device: " + device.name);
+    console.log("Connected to GATT server!");
 
+    const services = await gattServer.getPrimaryServices();
+    for (const service of services) {
+      console.log("Service:", service.uuid);
+
+      const characteristics = await service.getCharacteristics();
+      for (const characteristic of characteristics) {
+        console.log("  Characteristic:", characteristic.uuid);
+      }
+    }
     //LOGIC: Discover and log services and characteristics
     // await readBatteryLevel();
     return true;
   } catch (error) {
-    logMessage(`Error connecting to device: ${error.message}`);
+    console.log(`Error connecting to device: ${error.message}`);
     return false;
   }
 }
@@ -113,9 +125,9 @@ export async function connectToDevice() {
 export function disconnectDevice() {
   if (device && device.gatt.connected) {
     device.gatt.disconnect(); //* Disconnects device
-    logMessage("Device disconnected.");
+    console.log("Device disconnected.");
   } else {
-    logMessage("No device is connected.");
+    console.log("No device is connected.");
   }
 }
 
@@ -129,19 +141,19 @@ export async function readBatteryLevel() {
   if (MOCK_MODE) {
     // Simulate battery updates every time it's called
     const fakeBattery = Math.floor(Math.random() * 100) + 1;
-    logMessage(`(MOCK) Battery Level: ${fakeBattery}%`);
+    console.log(`(MOCK) Battery Level: ${fakeBattery}%`);
     return fakeBattery;
   }
   // test-MOCK_MODE-END
 
   if (!gattServer) {
     // Check if a GATT server is connected
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return null; // Return null if no device is connected
   }
 
   try {
-    logMessage("Accessing Battery Service...");
+    console.log("Accessing Battery Service...");
     // Access the Battery Service using its UUID
     const service = await gattServer.getPrimaryService(batteryServiceUUID);
     const characteristic = await service.getCharacteristic(
@@ -149,35 +161,23 @@ export async function readBatteryLevel() {
     );
     const value = await characteristic.readValue();
     const batteryLevel = value.getUint8(0); // Battery level is usually 0-100%
-    logMessage(`Battery Level: ${batteryLevel}%`);
+    console.log(`Battery Level: ${batteryLevel}%`);
     return batteryLevel; // Return the battery level
   } catch (error) {
-    logMessage(`Error reading characteristic: ${error.message}`);
+    console.log(`Error reading characteristic: ${error.message}`);
     return null; // Return null on error
   }
 }
 
 //*  readDeviceInformation
 export async function readDeviceInformation() {
-  // test-mock-Start
-  if (MOCK_MODE) {
-    logMessage("Mocking Device Information...");
-
-    return {
-      manufacturerName: "FGD Technologies",
-      modelNumber: "FGD-1234",
-      systemID: "AA:BB:CC:DD:EE:FF",
-    };
-  }
-  // test end
-
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return null;
   }
 
   try {
-    logMessage("Accessing Device Information Service...");
+    console.log("Accessing Device Information Service...");
     const service = await gattServer.getPrimaryService(
       deviceInformationServiceUUID
     );
@@ -206,9 +206,9 @@ export async function readDeviceInformation() {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join(":");
 
-    logMessage(`Manufacturer: ${manufacturerName}`);
-    logMessage(`Model Number: ${modelNumber}`);
-    logMessage(`System ID: ${systemID}`);
+    console.log(`Manufacturer: ${manufacturerName}`);
+    console.log(`Model Number: ${modelNumber}`);
+    console.log(`System ID: ${systemID}`);
 
     return {
       manufacturerName,
@@ -216,7 +216,7 @@ export async function readDeviceInformation() {
       systemID,
     };
   } catch (error) {
-    logMessage(`Error reading device information: ${error.message}`);
+    console.log(`Error reading device information: ${error.message}`);
     return null;
   }
 }
@@ -225,19 +225,19 @@ export async function readDeviceInformation() {
 export async function readAlertStatus() {
   // MOCK version for testing
   if (MOCK_MODE) {
-    logMessage("(MOCK) Reading Alert Status...");
+    console.log("(MOCK) Reading Alert Status...");
     return "Mock Alert: 0x00";
   }
 
   // Check if connected to a device
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return null;
   }
 
   try {
     // We'll add the reading logic here in the next step:
-    logMessage("Accessing Alert Notification Service...");
+    console.log("Accessing Alert Notification Service...");
     // Step 1: Get the Alert Notification Service
     const service = await gattServer.getPrimaryService(
       alertNotificationServiceUUID
@@ -267,7 +267,7 @@ export async function readAlertStatus() {
     }
 
     activeBits.forEach(({ bit, status }) => {
-      logMessage(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
+      console.log(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
     });
     // Example output:
     // Alert Status (hex): 0x04
@@ -278,7 +278,7 @@ export async function readAlertStatus() {
     // Step 6: Return the alert status
     return alertStatus; // decimal number
   } catch (error) {
-    logMessage(`Error reading Alert Status: ${error.message}`);
+    console.log(`Error reading Alert Status: ${error.message}`);
     return null;
   }
 }
@@ -294,15 +294,17 @@ let alertNotifyCharacteristic = null;
  */
 export async function toggleAlertStatusNotify(callback) {
   if (!gattServer) {
-    logMessage("Not connected to a device.");
+    console.log("Not connected to a device.");
     return false;
   }
 
   //  Define FIRST
   const handleValueChanged = (event) => {
-    const value = event.target.value.getUint8(0);
-    logMessage(
-      `📣 Alert Status (hex): 0x${value.toString(16).padStart(2, "0")}`
+    const value = event.target.value.getUint16(0, true); // true = little endian
+
+    console.log(`Notify value Status (dec): ${value}`);
+    console.log(
+      `Notify value Status (hex): 0x${value.toString(16).padStart(2, "0")}`
     );
 
     const activeBits = [];
@@ -312,7 +314,7 @@ export async function toggleAlertStatusNotify(callback) {
     }
 
     activeBits.forEach(({ bit, status }) => {
-      logMessage(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
+      console.log(`→ Bit ${bit}: ${status ? "ON (1)" : "OFF (0)"}`);
     });
 
     if (callback) callback(value);
@@ -332,7 +334,7 @@ export async function toggleAlertStatusNotify(callback) {
         "characteristicvaluechanged",
         handleValueChanged // ✅ Now it's safe to access!
       );
-      logMessage("🔕 Alert notifications stopped.");
+      console.log("🔕 Alert notifications stopped.");
       alertNotifyCharacteristic = null;
       return false;
     }
@@ -342,12 +344,12 @@ export async function toggleAlertStatusNotify(callback) {
       "characteristicvaluechanged",
       handleValueChanged
     );
-    logMessage("🔔 Alert notifications started.");
+    console.log("🔔 Alert notifications started.");
 
     alertNotifyCharacteristic = characteristic;
     return true;
   } catch (error) {
-    logMessage(`❌ Failed to toggle alert notify: ${error.message}`);
+    console.log(` Failed to toggle alert notify: ${error.message}`);
     return false;
   }
 }
@@ -357,7 +359,7 @@ export async function toggleAlertStatusNotify(callback) {
 //* READ Enviromental Sensing Function
 export async function readEnvironmentalData() {
   if (MOCK_MODE) {
-    logMessage("(MOCK) Reading Environmental Data...");
+    console.log("(MOCK) Reading Environmental Data...");
     return {
       methane: 14, // ppm
       lelStatus: "LEL:0000",
@@ -365,12 +367,12 @@ export async function readEnvironmentalData() {
   }
 
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return null;
   }
 
   try {
-    logMessage("Accessing Environmental Sensing Service...");
+    console.log("Accessing Environmental Sensing Service...");
 
     const service = await gattServer.getPrimaryService(
       environmentalSensingUUID
@@ -387,8 +389,8 @@ export async function readEnvironmentalData() {
     );
 
     const methaneValue = await methaneChar.readValue();
-    const methane = methaneValue.getUint16(0, false); // little-endian → ppm
-    logMessage(`Methane Concentration: ${methane} ppm`);
+    const methane = methaneValue.getUint16(0, false); // big-endian
+    console.log(`Methane Concentration: ${methane} lel`);
 
     // --- Descriptor 0x2901: Characteristic User Description (LEL label) ---
     const descriptors = await methaneChar.getDescriptors();
@@ -401,14 +403,14 @@ export async function readEnvironmentalData() {
       const descValue = await userDescDescriptor.readValue();
       const decoder = new TextDecoder("utf-8");
       methaneLabel = decoder.decode(descValue).replace(/\0/g, "");
-      logMessage(`Methane Descriptor Label: ${methaneLabel}`);
+      console.log(`Methane Descriptor Label: ${methaneLabel}`);
 
       // --- Temperature (0x2A6E) ---
       const tempChar = await service.getCharacteristic(temperatureUUID);
       const tempValue = await tempChar.readValue();
       const temperatureRaw = tempValue.getUint16(0, true); // spec says little-endian
       const temperature = temperatureRaw / 100; // convert to °C
-      logMessage(`Temperature: ${temperature.toFixed(2)} °C`);
+      console.log(`Temperature: ${temperature.toFixed(2)} °C`);
 
       // Check what are the characteristic is supported
       console.log(
@@ -422,7 +424,7 @@ export async function readEnvironmentalData() {
       );
       const intervalValue = await intervalChar.readValue();
       const interval = intervalValue.getUint16(0, true); // seconds
-      logMessage(`Measurement Interval: ${interval} seconds`);
+      console.log(`Measurement Interval: ${interval} seconds`);
 
       return {
         methane,
@@ -432,7 +434,7 @@ export async function readEnvironmentalData() {
       };
     }
   } catch (error) {
-    logMessage(`Error reading environmental data: ${error.message}`);
+    console.log(`Error reading environmental data: ${error.message}`);
     return null;
   }
 }
@@ -450,7 +452,7 @@ let methaneNotifyListener = null;
  */
 export async function startMethaneNotifications(callback) {
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return;
   }
 
@@ -461,7 +463,14 @@ export async function startMethaneNotifications(callback) {
     methaneChar = await service.getCharacteristic(methaneConcentrationUUID); //* Get the Methane Concentration characteristic
 
     await methaneChar.startNotifications(); //* Start notifications for the characteristic
-    logMessage(" Methane notifications started");
+    console.log(" Methane notifications started");
+
+    if (methaneNotifyListener) {
+      methaneChar.removeEventListener(
+        "characteristicvaluechanged",
+        methaneNotifyListener
+      );
+    }
 
     methaneNotifyListener = (event) => {
       //* Listener for characteristic value changes
@@ -469,7 +478,7 @@ export async function startMethaneNotifications(callback) {
       const methaneValue = event.target.value; //* Get the value from the event
       const methane = methaneValue.getUint16(0, true); // Read as little-endian
       const time = new Date().toLocaleTimeString();
-      logMessage(`[${time}] Methane Notify: ${methane} lel`);
+      console.log(`[${time}] Methane Notify: ${methane} lel`);
       callback(methane); // send value to UI
     };
 
@@ -479,7 +488,7 @@ export async function startMethaneNotifications(callback) {
       methaneNotifyListener // This will be set later
     );
   } catch (error) {
-    logMessage(` Failed to start methane notifications: ${error.message}`);
+    console.log(` Failed to start methane notifications: ${error.message}`);
   }
 }
 
@@ -488,13 +497,13 @@ export async function startMethaneNotifications(callback) {
  */
 export async function stopMethaneNotifications() {
   if (!methaneChar) {
-    logMessage(" Methane notify characteristic not set.");
+    console.log(" Methane notify characteristic not set.");
     return;
   }
 
   try {
     await methaneChar.stopNotifications();
-    logMessage(" Methane notifications stopped");
+    console.log(" Methane notifications stopped");
 
     if (methaneNotifyListener) {
       methaneChar.removeEventListener(
@@ -506,7 +515,7 @@ export async function stopMethaneNotifications() {
 
     methaneChar = null;
   } catch (error) {
-    logMessage(`❌ Failed to stop methane notifications: ${error.message}`);
+    console.log(`❌ Failed to stop methane notifications: ${error.message}`);
   }
 }
 // * end notifications for methane concentration ------------------------
@@ -523,7 +532,7 @@ let temperatureNotifyListener = null;
  */
 export async function startTemperatureNotifications(callback) {
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return;
   }
 
@@ -534,13 +543,13 @@ export async function startTemperatureNotifications(callback) {
     temperatureChar = await service.getCharacteristic(temperatureUUID);
 
     await temperatureChar.startNotifications();
-    logMessage(" Temperature notifications started");
+    console.log(" Temperature notifications started");
 
     temperatureNotifyListener = (event) => {
       const tempData = event.target.value;
       const raw = tempData.getUint16(0, true); // Read as little-endian
       const temperature = raw / 100; // Convert to Celsius
-      logMessage(` Temperature Notify: ${temperature.toFixed(2)} °C`);
+      console.log(` Temperature Notify: ${temperature.toFixed(2)} °C`);
       callback(temperature); // Send to React state
     };
 
@@ -549,7 +558,7 @@ export async function startTemperatureNotifications(callback) {
       temperatureNotifyListener
     );
   } catch (error) {
-    logMessage(` Failed to start temperature notifications: ${error.message}`);
+    console.log(` Failed to start temperature notifications: ${error.message}`);
   }
 }
 
@@ -558,13 +567,13 @@ export async function startTemperatureNotifications(callback) {
  */
 export async function stopTemperatureNotifications() {
   if (!temperatureChar) {
-    logMessage("⚠️ Temperature notify characteristic not set.");
+    console.log("⚠️ Temperature notify characteristic not set.");
     return;
   }
 
   try {
     await temperatureChar.stopNotifications();
-    logMessage(" Temperature notifications stopped");
+    console.log(" Temperature notifications stopped");
 
     if (temperatureNotifyListener) {
       temperatureChar.removeEventListener(
@@ -576,7 +585,7 @@ export async function stopTemperatureNotifications() {
 
     temperatureChar = null;
   } catch (error) {
-    logMessage(` Failed to stop temperature notifications: ${error.message}`);
+    console.log(` Failed to stop temperature notifications: ${error.message}`);
   }
 }
 
@@ -585,7 +594,7 @@ export async function stopTemperatureNotifications() {
 //* readGenericAccess
 export async function readGenericAccess() {
   if (MOCK_MODE) {
-    logMessage("(MOCK) Reading Generic Access...");
+    console.log("(MOCK) Reading Generic Access...");
     return {
       deviceName: "FG-DETECTOR",
       appearance: "Generic Tag (512)",
@@ -593,12 +602,12 @@ export async function readGenericAccess() {
   }
 
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return null;
   }
 
   try {
-    logMessage("Accessing Generic Access Service...");
+    console.log("Accessing Generic Access Service...");
     const service = await gattServer.getPrimaryService(
       genericAccessServiceUUID
     );
@@ -618,15 +627,15 @@ export async function readGenericAccess() {
     const appearanceText =
       appearanceCode === 512 ? "Generic Tag" : `Unknown (${appearanceCode})`;
 
-    logMessage(`Device Name: ${deviceName}`);
-    logMessage(`Appearance: ${appearanceText} (${appearanceCode})`);
+    console.log(`Device Name: ${deviceName}`);
+    console.log(`Appearance: ${appearanceText} (${appearanceCode})`);
 
     return {
       deviceName,
       appearance: `${appearanceText} (${appearanceCode})`,
     };
   } catch (error) {
-    logMessage(`Error reading Generic Access: ${error.message}`);
+    console.log(`Error reading Generic Access: ${error.message}`);
     return null;
   }
 }
@@ -634,7 +643,7 @@ export async function readGenericAccess() {
 //* readDeviceSettings
 export async function readDeviceSettings() {
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return null;
   }
   try {
@@ -686,12 +695,12 @@ export async function readDeviceSettings() {
 export async function writeDeviceSetting(uuid, value) {
   // Make sure we are connected
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return false;
   }
 
   try {
-    logMessage(`Writing to Device Setting: ${uuid}`);
+    console.log(`Writing to Device Setting: ${uuid}`);
 
     // Step 1: Get the service by its UUID (Device Settings Service)
     const service = await gattServer.getPrimaryService(
@@ -709,10 +718,10 @@ export async function writeDeviceSetting(uuid, value) {
     // Step 4: Write the value to the BLE device
     await characteristic.writeValue(buffer);
 
-    logMessage(` Successfully wrote value ${value} to characteristic ${uuid}`);
+    console.log(` Successfully wrote value ${value} to characteristic ${uuid}`);
     return true;
   } catch (error) {
-    logMessage(` Failed to write to device setting: ${error.message}`);
+    console.log(` Failed to write to device setting: ${error.message}`);
     return false;
   }
 }
@@ -720,11 +729,11 @@ export async function writeDeviceSetting(uuid, value) {
 //* writeMeasurementInterval
 export async function writeMeasurementInterval(value) {
   if (!gattServer) {
-    logMessage("No connected device. Connect first.");
+    console.log("No connected device. Connect first.");
     return false;
   }
   try {
-    logMessage(`Writing Measurement Interval: ${value}`);
+    console.log(`Writing Measurement Interval: ${value}`);
     const service = await gattServer.getPrimaryService(
       environmentalSensingUUID
     );
@@ -735,10 +744,10 @@ export async function writeMeasurementInterval(value) {
     const view = new DataView(buffer);
     view.setUint16(0, value, true); // little endian
     await characteristic.writeValue(buffer);
-    logMessage(`Successfully wrote measurement interval: ${value}`);
+    console.log(`Successfully wrote measurement interval: ${value}`);
     return true;
   } catch (error) {
-    logMessage(` Failed to write measurement interval: ${error.message}`);
+    console.log(` Failed to write measurement interval: ${error.message}`);
     return false;
   }
 }
@@ -747,7 +756,7 @@ export async function writeMeasurementInterval(value) {
 
 // export async function discoverServicesAndCharacteristics() {
 //   if (!gattServer) {
-//     logMessage("No connected device. Connect first.");
+//     console.log("No connected device. Connect first.");
 //     return;
 //   }
 
@@ -756,12 +765,12 @@ export async function writeMeasurementInterval(value) {
 //     const services = await gattServer.getPrimaryServices();
 
 //     for (const service of services) {
-//       logMessage(`Service: ${service.uuid}`); // Log the service UUID
+//       console.log(`Service: ${service.uuid}`); // Log the service UUID
 
 //       // Get characteristics of the service
 //       const characteristics = await service.getCharacteristics();
 //       for (const characteristic of characteristics) {
-//         logMessage(
+//         console.log(
 //           `Characteristic: ${characteristic.uuid} - Properties: ${Object.keys(
 //             characteristic.properties
 //           ).join(", ")}`
@@ -769,7 +778,7 @@ export async function writeMeasurementInterval(value) {
 //       }
 //     }
 //   } catch (error) {
-//     logMessage(
+//     console.log(
 //       `Error discovering services and characteristics: ${error.message}`
 //     );
 //   }
@@ -782,7 +791,7 @@ export async function writeMeasurementInterval(value) {
 
 //export async function readCharacteristic() {
 // if (!gattServer) {
-//   logMessage("No connected device. Connect first.");
+//   console.log("No connected device. Connect first.");
 //   return;
 // }
 // try {
@@ -799,9 +808,9 @@ export async function writeMeasurementInterval(value) {
 //   // Decode the value (assuming UTF-8 text)
 //   const decoder = new TextDecoder("utf-8");
 //   const data = decoder.decode(value);
-//   logMessage(`Received Data: ${data}`);
+//   console.log(`Received Data: ${data}`);
 //   return data;
 // } catch (error) {
-//   logMessage(`Error reading characteristic: ${error.message}`);
+//   console.log(`Error reading characteristic: ${error.message}`);
 // }
 //}

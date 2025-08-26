@@ -24,7 +24,7 @@ import {
   stopTemperatureNotifications,
   writeMeasurementInterval,
   // measurementIntervalUUID,
-  toggleAlertStatusNotify,
+  toggleAlertStatusNotify, // *Toggle alert status notifications
 } from "../../services/bleService";
 import VideoStream from "../VideoStream/VideoStream";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -59,17 +59,17 @@ function Tabs() {
   const [mediaControlValue, setMediaControlValue] = useState(null); // store Media Control Point value
   const [mediaControlInput, setMediaControlInput] = useState(0); // input to write to Media Control Point
 
-  const [selectedGasType, setSelectedGasType] = useState(0); // default to Methane
+  const [selectedGasType, setSelectedGasType] = useState(""); // default
   const gasTypeLabel = (value) => {
     switch (value) {
-      case 0:
-        return "Methane";
       case 1:
-        return "Propane";
+        return "Methane";
       case 2:
         return "Butane";
       case 3:
         return "Hydrogen";
+      case 4:
+        return "Propane";
       default:
         return `Unknown (${value})`;
     }
@@ -111,6 +111,7 @@ function Tabs() {
     }
   }, [activeTab]); // Runs every time activeTab changes
 
+  //----------------------------Alert Status------------------------------------------
   // *fetch Alert Status
   // Reusable fetch function -> fetchAlertStatus():
   // This function reads the alert status from the BLE device and updates the state
@@ -129,24 +130,34 @@ function Tabs() {
     }
   }, [activeTab]);
 
-  // *fetch environmentalData Status
+  // *Automatically start alert notifications on app launch
   useEffect(() => {
-    if (activeTab === "Environmental Sensing") {
-      async function fetchEnvironmentalData() {
-        const data = await readEnvironmentalData();
-        setEnvironmentalData(data);
-      }
-      fetchEnvironmentalData();
-    }
-  }, [activeTab]);
+    (async () => {
+      const result = await toggleAlertStatusNotify((newValue) => {
+        setAlertStatus(newValue);
+      });
+      setAlertNotifyOn(result); // true = started, false = stopped
+    })();
+  }, []); // empty dependency array = run once on mount
+
+  const [showDiagnostics, setShowDiagnostics] = useState(false); // State to track if diagnostics should be shown
+
+  //----------------------------Alert Status End------------------------------------------
+
+  // *fetch environmentalData Status when
+  useEffect(() => {
+    // if (activeTab === "Environmental Sensing") {
+    //   fetchEnvironmentalData();
+    // }
+    fetchEnvironmentalData();
+  }, []); // Only run once on mount
 
   // *Reusable fetch function for environmental data
   // This function reads the environmental data from the BLE device and updates the state
-  const fetchEnvSensing = async () => {
-    const status = await readEnvironmentalData();
-    setEnvironmentalData(status);
-    console.log(" Environmental Data (test):", status);
-  };
+  async function fetchEnvironmentalData() {
+    const data = await readEnvironmentalData();
+    setEnvironmentalData(data);
+  }
 
   // *State to track if methane notifications are active
   const [isMethaneStreaming, setIsMethaneStreaming] = useState(false); // State to track if methane notifications are active
@@ -208,9 +219,10 @@ function Tabs() {
     }
   }, [activeTab]);
 
-  //* media control point
+  //* media control point --> changed to device control
   useEffect(() => {
-    if (activeTab === "Media Control Point") {
+    if (activeTab === "Device Control") {
+      // was named : Media Control Point -> now its Device Control !
       // Fetch the current value of the Media Control Point characteristic
       fetchMediaControlPoint();
     }
@@ -221,9 +233,8 @@ function Tabs() {
     setMediaControlValue(value);
   };
 
-  // *Array of tabs: Each tab has a name and corresponding content
+  // *Array of objects: Each tab has a name and corresponding content as a fields od the object
   const tabs = [
-    { name: "Device Data (demo)", content: <DeviceData /> },
     {
       name: "Device Info",
       content: (
@@ -268,31 +279,41 @@ function Tabs() {
             <FontAwesomeIcon icon={faN} />
           </button>
 
-          {alertStatus === null ? (
-            <p>Reading alert status...</p>
-          ) : alertStatus === 0 ? (
-            <p>All clear — no alerts active.</p>
-          ) : (
-            <div>
-              <p>
-                <strong>Status word:</strong> 0x
-                {alertStatus.toString(16).padStart(4, "0").toUpperCase()}
-              </p>
-              <ul>
-                {Array.from({ length: 16 }, (_, i) => {
-                  const mask = 1 << i;
-                  const isOn = (alertStatus & mask) !== 0;
-                  const alertInfo = ALERT_PRIORITY[mask];
-                  return (
-                    <li key={i}>
-                      Bit {i}: {alertInfo ? alertInfo.name : "Unknown"} —{" "}
-                      {isOn ? "ON" : "OFF"}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+          {/* 2. Button toggles state diagnostics */}
+          <button
+            className="diagnostic-btn"
+            onClick={() => setShowDiagnostics((prev) => !prev)}
+          >
+            {showDiagnostics ? "Hide Diagnostic" : "Show Diagnostic"}
+          </button>
+
+          {/* 2. Only render block if showDiagnostics === true */}
+          {showDiagnostics &&
+            (alertStatus === null ? (
+              <p>Reading alert status...</p>
+            ) : alertStatus === 0 ? (
+              <p>All clear — no alerts active.</p>
+            ) : (
+              <div>
+                <p>
+                  <strong>Status word:</strong> 0x
+                  {alertStatus.toString(16).padStart(4, "0").toUpperCase()}
+                </p>
+                <ul>
+                  {Array.from({ length: 16 }, (_, i) => {
+                    const mask = 1 << i;
+                    const isOn = (alertStatus & mask) !== 0;
+                    const alertInfo = ALERT_PRIORITY[mask];
+                    return (
+                      <li key={i}>
+                        Bit {i}: {alertInfo ? alertInfo.name : "Unknown"} —{" "}
+                        {isOn ? "ON" : "OFF"}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
         </div>
       ),
     },
@@ -304,7 +325,7 @@ function Tabs() {
           {/* Button to toggle methane notifications */}
 
           {/*  Button to refresh environmental data */}
-          <button className="refresh-button" onClick={fetchEnvSensing}>
+          <button className="refresh-button" onClick={fetchEnvironmentalData}>
             <FontAwesomeIcon icon={faDownload} />
           </button>
 
@@ -366,9 +387,10 @@ function Tabs() {
                       }
                     }}
                   >
-                    Save
+                    Update
                   </button>
                 </div>
+                <DeviceData environmentalData={environmentalData} />
               </div>
             </div>
           ) : (
@@ -425,6 +447,10 @@ function Tabs() {
                 <button
                   style={{ marginLeft: "1rem" }}
                   onClick={async () => {
+                    if (!fullScale || isNaN(fullScale)) {
+                      alert("Please enter a valid number for Full Scale.");
+                      return; // stop here, don’t write to device
+                    }
                     const success = await writeDeviceSetting(
                       fullScaleUUID,
                       fullScale
@@ -439,7 +465,7 @@ function Tabs() {
                     }
                   }}
                 >
-                  Save
+                  Update
                 </button>
               </div>
               <br />
@@ -463,6 +489,10 @@ function Tabs() {
                   <button
                     style={{ marginLeft: "1rem" }}
                     onClick={async () => {
+                      if (!alarmLevel || isNaN(alarmLevel)) {
+                        alert("Please enter a valid number for Full Scale.");
+                        return; // stop here, don’t write to device
+                      }
                       const success = await writeDeviceSetting(
                         alarmLevelUUID,
                         alarmLevel
@@ -477,7 +507,7 @@ function Tabs() {
                       }
                     }}
                   >
-                    Save
+                    Update
                   </button>
                 </div>
               </div>
@@ -502,6 +532,10 @@ function Tabs() {
                   <button
                     style={{ marginLeft: "1rem" }}
                     onClick={async () => {
+                      if (!warnLevel || isNaN(warnLevel)) {
+                        alert("Please enter a valid number for Warn Level.");
+                        return; // stop here, don’t write to device
+                      }
                       const success = await writeDeviceSetting(
                         warnLevelUUID,
                         warnLevel
@@ -516,7 +550,7 @@ function Tabs() {
                       }
                     }}
                   >
-                    Save
+                    Update
                   </button>
                 </div>
               </div>
@@ -542,6 +576,10 @@ function Tabs() {
                   <button
                     style={{ marginLeft: "1rem" }}
                     onClick={async () => {
+                      if (!lowestLevel || isNaN(lowestLevel)) {
+                        alert("Please enter a valid number for Lowest Level.");
+                        return; // stop here, don’t write to device
+                      }
                       const success = await writeDeviceSetting(
                         lowestLevelUUID,
                         lowestLevel
@@ -556,7 +594,7 @@ function Tabs() {
                       }
                     }}
                   >
-                    Save
+                    Update
                   </button>
                 </div>
               </div>
@@ -581,6 +619,10 @@ function Tabs() {
                   <button
                     style={{ marginLeft: "1rem" }}
                     onClick={async () => {
+                      if (!responseTime || isNaN(responseTime)) {
+                        alert("Please enter a valid number for Response Time.");
+                        return; // stop here, don’t write to device
+                      }
                       const success = await writeDeviceSetting(
                         responseTimeUUID,
                         responseTime
@@ -595,7 +637,7 @@ function Tabs() {
                       }
                     }}
                   >
-                    Save
+                    Update
                   </button>
                 </div>
               </div>
@@ -620,6 +662,10 @@ function Tabs() {
                   <button
                     style={{ marginLeft: "1rem" }}
                     onClick={async () => {
+                      if (!blockDelay || isNaN(blockDelay)) {
+                        alert("Please enter a valid number for Block Delay.");
+                        return; // stop here, don’t write to device
+                      }
                       const success = await writeDeviceSetting(
                         blockDelayUUID,
                         blockDelay
@@ -635,7 +681,7 @@ function Tabs() {
                       }
                     }}
                   >
-                    Save
+                    Update
                   </button>
                 </div>
               </div>
@@ -662,7 +708,7 @@ function Tabs() {
                     onClick={handleWriteGasType}
                     style={{ marginLeft: "1rem" }}
                   >
-                    Save
+                    Update
                   </button>
                   {/*  Optional: Show current gas type label */}
                   <p style={{ marginTop: "0.5rem", color: "green" }}>
@@ -680,16 +726,17 @@ function Tabs() {
         </div>
       ),
     },
-    { name: "New Content", content: "Content for new content" },
+    ,
     {
-      name: "Media Control Point",
+      name: "Device Control",
       content: (
         <div>
-          <h2>Media Control Point</h2>
+          <h2>Device Control</h2>
           <button className="refresh-button" onClick={fetchMediaControlPoint}>
             <FontAwesomeIcon icon={faDownload} />
           </button>
 
+          {/* Show current mode */}
           {mediaControlValue === null ? (
             <p>Click to read the current mode.</p>
           ) : (
@@ -704,35 +751,45 @@ function Tabs() {
                 : `Unknown (${mediaControlValue})`}
             </p>
           )}
+
+          {/* Action buttons */}
           <div>
-            <input
-              type="number"
-              min="0"
-              max="2"
-              value={mediaControlInput}
-              onChange={(e) => setMediaControlInput(parseInt(e.target.value))}
-              style={{ width: "4rem", marginRight: "1rem" }}
-            />
-            <button
+            <button // Alignment button
+              className="media-buttons"
               onClick={async () => {
-                const success = await writeMediaControlPoint(mediaControlInput);
+                // If already Alignment → back to Normal
+                const newValue = mediaControlValue === 1 ? 0 : 1;
+                const success = await writeMediaControlPoint(newValue);
                 if (success) {
-                  console.log("✅ Media Control Point updated!");
-                  fetchMediaControlPoint(); // Optional: re-read after update
+                  console.log("Media Control Point updated!");
+                  fetchMediaControlPoint(); // Refresh state
                 } else {
-                  console.log("❌ Failed to update Media Control Point.");
+                  console.log("Failed to update Media Control Point.");
                 }
               }}
             >
-              Save
+              Alignment
+            </button>
+
+            <button // Zero Calibration button
+              className="media-buttons"
+              onClick={async () => {
+                // If already Zero Calibration → back to Normal
+                const newValue = mediaControlValue === 2 ? 0 : 2;
+                const success = await writeMediaControlPoint(newValue);
+                if (success) {
+                  console.log("Media Control Point updated!");
+                  fetchMediaControlPoint();
+                } else {
+                  console.log("Failed to update Media Control Point.");
+                }
+              }}
+            >
+              Zero Calibration
             </button>
           </div>
         </div>
       ),
-    },
-    {
-      name: "Video Stream",
-      content: <VideoStream />,
     },
 
     {
@@ -760,6 +817,7 @@ function Tabs() {
         </div>
       ),
     },
+    { name: "New Content", content: "Content for new content" },
   ];
 
   const handleTabClick = (tabName) => {
@@ -795,6 +853,16 @@ function Tabs() {
 }
 
 export default Tabs;
+
+//* keep all tabs render always then graph is alive always
+// {tabs.map((tab) => (
+//   <div
+//     key={tab.name}
+//     style={{ display: activeTab === tab.name ? "block" : "none" }}
+//   >
+//     {tab.content}
+//   </div>
+// ))}
 
 // * This is the original code (return part) for the Tabs component before the dropdown was added.
 //  return (
