@@ -6,12 +6,13 @@
  ** Interacting with BLE services and characteristics.
  */
 import { mediaControlServiceUUID } from "./mediaControl";
+import { authServiceUUID } from "./loginService";
 const MOCK_MODE = false; //TEST Change to false when using the real device
 
 //const serviceId = "1b7e8251-2877-41c3-b46e-cf057c562023"; //* UUID for accessing specific BLE service
 //const receiveCharId = "8ac32d3f-5cb9-4d44-bec2-ee689169f626"; //* UUID for receiving data from the device
 //const devicePrefix = "test"; //* Prefix to filter devices during discovery
-
+const genericAttributeUUID = "00001801-0000-1000-8000-00805f9b34fb"; // 0x1801 for the passkey auth service
 // * Device info
 const deviceInformationServiceUUID = "0000180a-0000-1000-8000-00805f9b34fb"; //* PRIME UUID
 const manufacturerNameUUID = "00002a29-0000-1000-8000-00805f9b34fb";
@@ -49,7 +50,7 @@ export const blockDelayUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078906";
 export const selectedGasTypeUUID = "889bf2a8-f93f-4481-a67e-3b2f4a078907";
 
 // This is the physical BLE device that you discover via navigator.bluetooth.requestDevice().
-let device = null; //* It represents the Bluetooth hardware object, and it has metadata like: device.name , device.id
+export let device = null; //* It represents the Bluetooth hardware object, and it has metadata like: device.name , device.id
 
 //This is created when you connect to the device. -> This is what actually gives you access to Reading, writing, and notifications services characteristics and so on..
 export let gattServer = null; //* Variable to store GATT server instance --> (Generic Attribute Profile) is a protocol used in BLE communication. It defines how two BLE devices send and receive data between each other.
@@ -65,23 +66,15 @@ export let gattServer = null; //* Variable to store GATT server instance --> (Ge
  * - Connects to the device's GATT server.
  */
 export async function connectToDevice() {
-  // test - MOCK_MODE - Start
-  if (MOCK_MODE) {
-    console.log("(MOCK) Simulating BLE connection...");
-
-    // Simulate a delay to make it feel real
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    console.log("(MOCK) Connected to fake device!");
-    return true; // Indicate successful connection
-  }
-  // test - MOCK_MODE - END
+  // { authOnly = false } = {}
+  // console.log("connectToDevice called with authOnly =", authOnly);
 
   try {
     console.log("Requesting Bluetooth device...");
     device = await navigator.bluetooth.requestDevice({
       //* returns a BluetoothDevice object.
       //acceptAllDevices: true, //* Allow only filtered devices
+      filters: [{ namePrefix: "FG" }, { namePrefix: "fg" }],
       optionalServices: [
         batteryServiceUUID,
         deviceInformationServiceUUID,
@@ -90,8 +83,10 @@ export async function connectToDevice() {
         genericAccessServiceUUID,
         deviceSettingsServiceUUID,
         mediaControlServiceUUID,
-      ], // Correctly formatted UUID
-      filters: [{ namePrefix: "FG" }, { namePrefix: "fg" }], //* Filter devices by prefix
+        authServiceUUID, // still include auth here too
+        genericAttributeUUID,
+      ],
+      //* Filter devices by prefix
       // optionalServices: [serviceId], //* Specify desired service UUID
     });
 
@@ -100,16 +95,21 @@ export async function connectToDevice() {
     // gatt.connect() starts a Bluetooth connection.
     console.log("Selected device: " + device.name);
     console.log("Connected to GATT server!");
+    await checkServiceChanged();
 
-    const services = await gattServer.getPrimaryServices();
-    for (const service of services) {
-      console.log("Service:", service.uuid);
+    await subscribeServiceChanged();
 
-      const characteristics = await service.getCharacteristics();
-      for (const characteristic of characteristics) {
-        console.log("  Characteristic:", characteristic.uuid);
-      }
-    }
+    //Test show services and characteristics :
+    // const services = await gattServer.getPrimaryServices();
+    // for (const service of services) {
+    //   console.log("Service:", service.uuid);
+
+    //   const characteristics = await service.getCharacteristics();
+    //   for (const characteristic of characteristics) {
+    //     console.log("  Characteristic:", characteristic.uuid);
+    //   }
+    // }
+    // test - end part that show characteristics and service .....
     //LOGIC: Discover and log services and characteristics
     // await readBatteryLevel();
     return true;
@@ -752,65 +752,96 @@ export async function writeMeasurementInterval(value) {
   }
 }
 
-// * Discover Available Services and Characteristics
-
-// export async function discoverServicesAndCharacteristics() {
-//   if (!gattServer) {
-//     console.log("No connected device. Connect first.");
-//     return;
-//   }
-
-//   try {
-//     // Get all available services
-//     const services = await gattServer.getPrimaryServices();
-
-//     for (const service of services) {
-//       console.log(`Service: ${service.uuid}`); // Log the service UUID
-
-//       // Get characteristics of the service
-//       const characteristics = await service.getCharacteristics();
-//       for (const characteristic of characteristics) {
-//         console.log(
-//           `Characteristic: ${characteristic.uuid} - Properties: ${Object.keys(
-//             characteristic.properties
-//           ).join(", ")}`
-//         );
-//       }
+// // helper to fully reset connection state
+// export function resetConnection() {
+//   if (device && device.gatt?.connected) {
+//     try {
+//       device.gatt.disconnect();
+//       console.log("[bleService] Disconnected existing connection.");
+//     } catch (e) {
+//       console.warn("[bleService] Error while disconnecting:", e);
 //     }
-//   } catch (error) {
-//     console.log(
-//       `Error discovering services and characteristics: ${error.message}`
-//     );
 //   }
+//   device = null;
+//   gattServer = null;
+//   console.log("[bleService] Connection reset (device and gattServer cleared).");
 // }
 
-/**
- * Reads data from a BLE characteristic.
- * - Assumes device is connected and GATT server is available.
- */
+// * helper: List all services & characteristics currently visible
+export async function listAllServices() {
+  if (!gattServer) {
+    console.log("[bleService] No GATT server connected.");
+    return;
+  }
 
-//export async function readCharacteristic() {
-// if (!gattServer) {
-//   console.log("No connected device. Connect first.");
-//   return;
-// }
-// try {
-//   // Get the Battery Service
-//   const service = await gattServer.getPrimaryService(
-//     "0000180F-0000-1000-8000-00805f9b34fb"
-//   );
-//   // Get the Battery Level Characteristic
-//   const characteristic = await service.getCharacteristic(
-//     "00002A19-0000-1000-8000-00805f9b34fb"
-//   );
-//   // Read the characteristic's value
-//   const value = await characteristic.readValue();
-//   // Decode the value (assuming UTF-8 text)
-//   const decoder = new TextDecoder("utf-8");
-//   const data = decoder.decode(value);
-//   console.log(`Received Data: ${data}`);
-//   return data;
-// } catch (error) {
-//   console.log(`Error reading characteristic: ${error.message}`);
-// }
-//}
+  try {
+    const services = await gattServer.getPrimaryServices();
+    console.log("---- Services after connect/auth ----");
+    for (const service of services) {
+      console.log("Service:", service.uuid);
+      const chars = await service.getCharacteristics();
+      for (const char of chars) {
+        console.log("  Char:", char.uuid);
+      }
+    }
+    console.log("---- End of service list ----");
+  } catch (e) {
+    console.error("[bleService] listAllServices failed:", e);
+  }
+}
+
+//* Subscribe to Service Changed (0x2A05) in Generic Attribute Service (0x1801)
+export async function subscribeServiceChanged() {
+  console.log("[bleService] Subscribing to Service Changed (0x2A05)...");
+
+  if (!gattServer) {
+    console.warn("[bleService] No GATT server connected yet.");
+    return;
+  }
+
+  try {
+    // Get Generic Attribute service (0x1801)
+    const service = await gattServer.getPrimaryService(genericAttributeUUID);
+
+    // Get Service Changed characteristic (0x2A05)
+    const char = await service.getCharacteristic(
+      "00002a05-0000-1000-8000-00805f9b34fb"
+    );
+
+    // Start listening for Service Changed indications
+
+    char.addEventListener("characteristicvaluechanged", (event) => {
+      console.log(
+        "🔔 [bleService] Service Changed indication received!",
+        event
+      );
+
+      // 👉 when this fires, Chrome should refresh its cache.
+      // At this point, call getPrimaryServices() again or trigger your logic to load full services.
+    });
+
+    console.log("[bleService] Subscribed to Service Changed (0x2A05).");
+  } catch (e) {
+    console.error("[bleService] subscribeServiceChanged failed:", e);
+  }
+}
+
+// *Debug: check Service Changed characteristic properties
+export async function checkServiceChanged() {
+  if (!gattServer) {
+    console.log("[bleService] No GATT server connected.");
+    return;
+  }
+
+  try {
+    const service = await gattServer.getPrimaryService(
+      "00001801-0000-1000-8000-00805f9b34fb"
+    ); // GATT service
+    const char = await service.getCharacteristic(
+      "00002a05-0000-1000-8000-00805f9b34fb"
+    ); // Service Changed char
+    console.log("[bleService] 0x2A05 properties:", char.properties);
+  } catch (e) {
+    console.error("[bleService] checkServiceChanged failed:", e);
+  }
+}

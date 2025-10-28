@@ -32,7 +32,7 @@ function Navbar({ isConnected, setIsConnected }) {
       disconnectDevice(); //* Disconnect BLE device
       setIsConnected(false); //* Update state to reflect disconnection
     } else {
-      const success = await connectToDevice(); //* Attempt to connect to a BLE device
+      const success = await connectToDevice(); //* Attempt to connect to a BLE device { authOnly: true }
       if (success) {
         setIsConnected(true); //* Update state to reflect successful connection
 
